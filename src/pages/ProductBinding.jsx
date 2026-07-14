@@ -53,6 +53,11 @@ export default function ProductBinding() {
       setNotFound(false);
       await fetchData();
     } catch (e) {
+      if (e.response?.status === 409) {
+        toast.error(e.response.data?.detail || `Codigo "${codigo}" ja foi vinculado a outro item desta nota.`);
+        setCodeInput('');
+        return;
+      }
       if (e.response?.status === 404) {
         try {
           await axios.post(`${API}/produtos`, {

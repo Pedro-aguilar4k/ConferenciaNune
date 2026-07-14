@@ -114,8 +114,34 @@ class UserUpdateInput(BaseModel):
     ativo: Optional[bool] = None
     password: Optional[str] = None
 
+_indexes_created = False
+
+async def _ensure_indexes():
+    global _indexes_created
+    if _indexes_created:
+        return
+    try:
+        await asyncio.gather(
+            db.produtos.create_index("codigo", background=True),
+            db.produtos.create_index("ean", background=True),
+            db.produtos.create_index("ativo", background=True),
+            db.fornecedores.create_index("cnpj", background=True),
+            db.itens_nota.create_index("nota_id", background=True),
+            db.itens_nota.create_index([("produto_interno_id", 1)], background=True),
+            db.itens_nota.create_index([("cprod", 1), ("produto_interno_codigo", 1)], background=True),
+            db.notas.create_index("chave", background=True),
+            db.notas.create_index("status", background=True),
+            db.notas.create_index([("created_at", -1)], background=True),
+            db.equivalencia_produtos.create_index([("fornecedor_cnpj", 1), ("codigo_fornecedor", 1)], background=True),
+            db.usuarios.create_index("username", unique=True, background=True),
+        )
+        _indexes_created = True
+    except Exception:
+        pass
+
 @api_router.post("/auth/login")
 async def login(data: LoginInput):
+    asyncio.ensure_future(_ensure_indexes())
     if await db.usuarios.count_documents({}) == 0:
         await db.usuarios.insert_one({
             'username': 'admin',
@@ -913,6 +939,15 @@ async def confirmar_vinculo(data: ConfirmarVinculoInput, _: dict = Depends(requi
 
     item = ItemNota.from_mongo(item_doc)
     produto = Produto.from_mongo(produto_doc)
+
+    duplicate = await db.itens_nota.find_one({
+        'nota_id': item.nota_id,
+        'produto_interno_codigo': produto.codigo,
+        '_id': {'$ne': ObjectId(data.item_nota_id)},
+    })
+    if duplicate:
+        raise HTTPException(409, f"Codigo \"{produto.codigo}\" ja foi vinculado ao item \"{duplicate.get('descricao_nfe', '')}\" nesta nota.")
+
     nota_doc = await db.notas.find_one({'_id': ObjectId(item.nota_id)})
     nota = Nota.from_mongo(nota_doc) if nota_doc else None
 

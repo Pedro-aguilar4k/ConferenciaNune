@@ -40,7 +40,7 @@ export default function Login() {
     <main className="login-shell">
       <header className="login-header">
         <div className="login-brand" aria-label="NuneDiesel Auto Peças">
-          <img src="/logo-icon.png" alt="" className="login-brand-mark" />
+          <img src="/nune-logo.png" alt="" className="login-brand-mark brand-logo" />
           <div>
             <p className="login-brand-name">NuneDiesel</p>
             <p className="login-brand-detail">Auto Peças</p>

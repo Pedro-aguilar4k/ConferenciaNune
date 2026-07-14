@@ -30,7 +30,7 @@ const routeTitles = [
 function Brand({ compact = false }) {
   return (
     <div className="flex items-center gap-3 min-w-0">
-      <img src="/logo-icon.png" alt="" className="h-8 w-12 object-contain shrink-0" />
+      <img src="/nune-logo.png" alt="" className="brand-logo h-9 w-14 object-contain shrink-0" />
       {!compact && <div className="min-w-0"><p className="text-[15px] font-bold tracking-[0.12em] text-[#101426] uppercase">NuneDiesel</p><p className="text-[9px] font-semibold tracking-[0.18em] text-[#8a91a0] uppercase">Autopeças · Linha pesada</p></div>}
     </div>
   );

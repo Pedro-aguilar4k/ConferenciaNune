@@ -367,7 +367,7 @@ code, .font-mono {
     .dark .app-sidebar, .dark .app-topbar { background: #0d0d0d; }
     .dark .app-nav-link { color: #a6a6a6; }
     .dark .app-nav-link:hover { color: #f1f1f1; background: #191919; }
-    .dark .app-nav-link.is-active { color: #090909; background: #b0b2e8; box-shadow: none; }
+    .dark .app-nav-link.is-active { color: #090909; background: #eef0ed; box-shadow: none; }
     .dark .app-nav-link.is-active::before { background: #f28a50; }
     .dark .app-icon-button { color: #a6a6a6; }
     .dark .app-icon-button:hover { border-color: #303030; color: #fff; background: #1b1b1b; }

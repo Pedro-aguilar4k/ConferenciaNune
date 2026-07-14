@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { TEST_IDS } from '@/constants/testIds';
 import { API } from '@/lib/api';
 
 const confiancaBadge = (score) => {
@@ -96,7 +95,7 @@ export default function RecognitionCenter() {
   if (loading) return <div className="flex items-center justify-center h-64 text-[#71717A]">Carregando...</div>;
 
   return (
-    <div data-testid="recognition-center-page" className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Central de Reconhecimento</h1>
@@ -117,7 +116,7 @@ export default function RecognitionCenter() {
       <div className="flex items-center gap-3">
         <Filter className="h-4 w-4 text-zinc-500" />
         <Select value={filterCnpj} onValueChange={setFilterCnpj}>
-          <SelectTrigger className="w-[300px] bg-[#121212] border-[#27272A] text-[#F4F4F5]" data-testid={TEST_IDS.recognitionFilterFornecedor}>
+          <SelectTrigger className="w-[300px] bg-[#121212] border-[#27272A] text-[#F4F4F5]">
             <SelectValue placeholder="Filtrar por fornecedor" />
           </SelectTrigger>
           <SelectContent className="bg-[#121212] border-[#27272A]">
@@ -141,7 +140,7 @@ export default function RecognitionCenter() {
             const isExpanded = expandedId === item.id;
             const bestSuggestion = item.sugestoes?.[0];
             return (
-              <div key={item.id} data-testid={`recognition-item-${item.id}`}
+              <div key={item.id}
                 className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden transition-all duration-150 hover:border-[#3f3f46]">
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-4">
@@ -165,19 +164,16 @@ export default function RecognitionCenter() {
                         </Badge>
                       )}
                       {bestSuggestion && bestSuggestion.similaridade >= 70 && (
-                        <button data-testid={`confirm-best-${item.id}`}
-                          onClick={() => handleConfirm(item, bestSuggestion.produto.id)}
+                        <button onClick={() => handleConfirm(item, bestSuggestion.produto.id)}
                           className="p-1.5 bg-green-600/20 hover:bg-green-600/30 rounded text-green-400 transition-colors" title="Confirmar Sugestao">
                           <Check className="h-4 w-4" />
                         </button>
                       )}
-                      <button data-testid={`alter-match-${item.id}`}
-                        onClick={() => openMatchDialog(item)}
+                      <button onClick={() => openMatchDialog(item)}
                         className="p-1.5 bg-blue-600/20 hover:bg-blue-600/30 rounded text-blue-400 transition-colors" title="Alterar / Buscar">
                         <Search className="h-4 w-4" />
                       </button>
-                      <button data-testid={`ignore-item-${item.id}`}
-                        onClick={() => handleIgnore(item.id)}
+                      <button onClick={() => handleIgnore(item.id)}
                         className="p-1.5 bg-zinc-600/20 hover:bg-zinc-600/30 rounded text-zinc-400 transition-colors" title="Ignorar">
                         <X className="h-4 w-4" />
                       </button>
@@ -215,8 +211,7 @@ export default function RecognitionCenter() {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge className={`${confiancaBadge(s.similaridade)} border text-xs`}>{s.similaridade}%</Badge>
-                            <button data-testid={`confirm-suggestion-${item.id}-${i}`}
-                              onClick={() => handleConfirm(item, s.produto.id)}
+                            <button onClick={() => handleConfirm(item, s.produto.id)}
                               className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-500 transition-colors">
                               Confirmar
                             </button>
@@ -257,7 +252,6 @@ export default function RecognitionCenter() {
               <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Sugestoes Automaticas</p>
               {selectedItem.sugestoes.map((s, i) => (
                 <button key={i} onClick={() => setSelectedProduct(s.produto.id)}
-                  data-testid={`dialog-suggestion-${i}`}
                   className={`w-full text-left p-3 rounded border transition-all ${
                     selectedProduct === s.produto.id
                       ? 'border-blue-500 bg-blue-500/10'
@@ -279,7 +273,7 @@ export default function RecognitionCenter() {
             <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-2">Busca Manual</p>
             <Input value={productSearch} onChange={e => handleProductSearch(e.target.value)}
               placeholder="Buscar por codigo ou descricao..."
-              className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5] mb-2" data-testid="recognition-product-search" />
+              className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5] mb-2" />
             {searchResults.length > 0 && (
               <div className="space-y-1 max-h-[200px] overflow-auto">
                 {searchResults.map(p => (
@@ -299,7 +293,7 @@ export default function RecognitionCenter() {
 
           <div className="flex justify-end gap-2 mt-2">
             <button onClick={() => setMatchDialogOpen(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors">Cancelar</button>
-            <button data-testid={TEST_IDS.recognitionConfirmButton} onClick={handleConfirmMatch} disabled={!selectedProduct}
+            <button onClick={handleConfirmMatch} disabled={!selectedProduct}
               className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-500 disabled:opacity-50 transition-colors">
               Confirmar Vinculo
             </button>

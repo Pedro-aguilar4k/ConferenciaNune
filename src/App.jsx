@@ -6,8 +6,6 @@ import Layout from "@/components/Layout";
 import { AuthProvider, PERM } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-// Code splitting: cada pagina vira um chunk carregado sob demanda,
-// reduzindo o tamanho do bundle inicial e acelerando o primeiro load.
 const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const NfeImport = lazy(() => import("@/pages/NfeImport"));
@@ -28,7 +26,6 @@ function PageFallback() {
   );
 }
 
-// Envolve uma pagina protegida no Layout, exigindo login (e permissao opcional).
 function Protected({ children, permission }) {
   return (
     <ProtectedRoute permission={permission}>

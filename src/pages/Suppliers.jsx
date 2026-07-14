@@ -5,7 +5,6 @@ import { Search, Plus, Pencil, Trash2, Truck } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { TEST_IDS } from '@/constants/testIds';
 import { API } from '@/lib/api';
 
 const emptyForm = { cnpj: '', nome: '', contato: '', email: '', telefone: '' };
@@ -60,7 +59,7 @@ export default function Suppliers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Fornecedores</h1>
-        <button data-testid={TEST_IDS.addSupplierButton} onClick={openAdd}
+        <button onClick={openAdd}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-500 rounded-md text-sm transition-colors">
           <Plus className="h-4 w-4" /> Novo Fornecedor
         </button>
@@ -68,7 +67,7 @@ export default function Suppliers() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-        <Input data-testid={TEST_IDS.supplierSearchInput} value={search} onChange={e => setSearch(e.target.value)}
+        <Input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por CNPJ ou nome..."
           className="pl-10 bg-[#121212] border-[#27272A] text-[#F4F4F5] placeholder:text-zinc-600 focus:border-blue-500" />
       </div>
@@ -80,7 +79,7 @@ export default function Suppliers() {
             <p>Nenhum fornecedor encontrado</p>
           </div>
         ) : (
-          <Table data-testid={TEST_IDS.suppliersTable}>
+          <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent border-[#27272A]">
                 <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">CNPJ</TableHead>
@@ -99,9 +98,9 @@ export default function Suppliers() {
                   <TableCell className="text-sm text-zinc-400">{f.telefone || '-'}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <button data-testid={`edit-supplier-${f.id}`} onClick={() => openEdit(f)}
+                      <button onClick={() => openEdit(f)}
                         className="p-1.5 hover:bg-blue-600/20 rounded text-blue-400 transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
-                      <button data-testid={`delete-supplier-${f.id}`} onClick={() => handleDelete(f.id)}
+                      <button onClick={() => handleDelete(f.id)}
                         className="p-1.5 hover:bg-red-600/20 rounded text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </TableCell>
@@ -123,35 +122,35 @@ export default function Suppliers() {
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">CNPJ *</label>
                 <Input value={form.cnpj} onChange={e => setForm({...form, cnpj: e.target.value})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="supplier-form-cnpj" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Nome *</label>
                 <Input value={form.nome} onChange={e => setForm({...form, nome: e.target.value})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="supplier-form-nome" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
             </div>
             <div>
               <label className="text-xs text-zinc-500 mb-1 block">Contato</label>
               <Input value={form.contato} onChange={e => setForm({...form, contato: e.target.value})}
-                className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="supplier-form-contato" />
+                className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Email</label>
                 <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="supplier-form-email" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Telefone</label>
                 <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="supplier-form-telefone" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-2">
             <button onClick={() => setDialogOpen(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors">Cancelar</button>
-            <button data-testid="supplier-form-save" onClick={handleSave}
+            <button onClick={handleSave}
               className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-500 transition-colors">
               {editing ? 'Salvar' : 'Criar'}
             </button>

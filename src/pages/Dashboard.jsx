@@ -3,7 +3,6 @@ import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { FileCheck, Clock, AlertTriangle, Link2, Target, Zap, Brain } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { TEST_IDS } from '@/constants/testIds';
 import { API } from '@/lib/api';
 
 export default function Dashboard() {
@@ -23,16 +22,15 @@ export default function Dashboard() {
     }
   };
 
-  // Derived data — memoized so it only recomputes when `data` actually changes.
   const stats = useMemo(() => {
     if (!data) return [];
     return [
-      { label: 'Conferidas Hoje', value: data.conferidas_hoje, icon: FileCheck, color: 'text-green-400', border: 'border-green-500/20', testId: TEST_IDS.statConferidas },
-      { label: 'Pendentes', value: data.pendentes, icon: Clock, color: 'text-yellow-400', border: 'border-yellow-500/20', testId: TEST_IDS.statPendentes },
-      { label: 'Tempo Medio', value: `${data.tempo_medio_min}m`, icon: Clock, color: 'text-blue-400', border: 'border-blue-500/20', testId: TEST_IDS.statTempoMedio },
-      { label: 'Divergencias', value: data.divergentes, icon: AlertTriangle, color: 'text-red-400', border: 'border-red-500/20', testId: TEST_IDS.statDivergencias },
-      { label: 'Sem Vinculo', value: data.sem_vinculo, icon: Link2, color: 'text-orange-400', border: 'border-orange-500/20', testId: TEST_IDS.statSemVinculo },
-      { label: 'Automacao', value: `${data.pct_identificacao_auto}%`, icon: Target, color: 'text-emerald-400', border: 'border-emerald-500/20', testId: TEST_IDS.statPrecisao },
+      { label: 'Conferidas Hoje', value: data.conferidas_hoje, icon: FileCheck, color: 'text-green-400', border: 'border-green-500/20' },
+      { label: 'Pendentes', value: data.pendentes, icon: Clock, color: 'text-yellow-400', border: 'border-yellow-500/20' },
+      { label: 'Tempo Medio', value: `${data.tempo_medio_min}m`, icon: Clock, color: 'text-blue-400', border: 'border-blue-500/20' },
+      { label: 'Divergencias', value: data.divergentes, icon: AlertTriangle, color: 'text-red-400', border: 'border-red-500/20' },
+      { label: 'Sem Vinculo', value: data.sem_vinculo, icon: Link2, color: 'text-orange-400', border: 'border-orange-500/20' },
+      { label: 'Automacao', value: `${data.pct_identificacao_auto}%`, icon: Target, color: 'text-emerald-400', border: 'border-emerald-500/20' },
     ];
   }, [data]);
 
@@ -55,7 +53,7 @@ export default function Dashboard() {
   if (!data) return <div className="text-[#71717A]">Erro ao carregar dashboard</div>;
 
   return (
-    <div data-testid="dashboard-page" className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-4">
@@ -72,7 +70,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map(s => (
-          <div key={s.label} data-testid={s.testId} className={`bg-[#121212] border ${s.border} rounded-md p-4 transition-all duration-150 hover:bg-[#1A1A1A]`}>
+          <div key={s.label} className={`bg-[#121212] border ${s.border} rounded-md p-4 transition-all duration-150 hover:bg-[#1A1A1A]`}>
             <div className={`flex items-center gap-2 mb-3 ${s.color}`}>
               <s.icon className="h-3.5 w-3.5" />
               <span className="text-[10px] tracking-[0.12em] uppercase text-zinc-500">{s.label}</span>

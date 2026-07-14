@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { Upload, FileText, Trash2, ClipboardCheck, Link2, Search, FileBarChart2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { TEST_IDS } from '@/constants/testIds';
 import { API } from '@/lib/api';
 import SefazImport from '@/components/SefazImport';
 import { useAuth, PERM } from '@/contexts/AuthContext';
@@ -89,7 +88,7 @@ export default function NfeImport() {
               <p className="text-[#F4F4F5] font-medium">Importar XML da NF-e</p>
               <p className="text-xs text-zinc-500 mt-1">Clique ou arraste o arquivo XML</p>
             </div>
-            <input ref={fileInputRef} data-testid={TEST_IDS.xmlUploadInput} type="file" accept=".xml" className="hidden" onChange={handleUpload} />
+            <input ref={fileInputRef} type="file" accept=".xml" className="hidden" onChange={handleUpload} />
             {uploading && <p className="text-blue-400 text-sm">Processando...</p>}
           </div>
 
@@ -118,7 +117,7 @@ export default function NfeImport() {
             <p className="text-xs mt-1">Importe um arquivo XML de NF-e</p>
           </div>
         ) : (
-          <Table data-testid={TEST_IDS.notasList}>
+          <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent border-[#27272A]">
                 <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Numero</TableHead>
@@ -155,12 +154,12 @@ export default function NfeImport() {
                     <TableCell>
                       <div className="flex gap-1">
                         {nota.itens_identificados < nota.total_itens && nota.status !== 'conferida' ? (
-                          <button data-testid={`vincular-nota-${nota.id}`} onClick={() => navigate(`/vinculacao/${nota.id}`)}
+                          <button onClick={() => navigate(`/vinculacao/${nota.id}`)}
                             className="p-1.5 hover:bg-yellow-600/20 rounded text-yellow-400 transition-colors" title="Vincular Produtos">
                             <Link2 className="h-4 w-4" />
                           </button>
                         ) : (
-                          <button data-testid={`conferir-nota-${nota.id}`} onClick={() => navigate(`/conferencia/${nota.id}`)}
+                          <button onClick={() => navigate(`/conferencia/${nota.id}`)}
                             className="p-1.5 hover:bg-blue-600/20 rounded text-blue-400 transition-colors" title="Conferir">
                             <ClipboardCheck className="h-4 w-4" />
                           </button>
@@ -172,7 +171,7 @@ export default function NfeImport() {
                           </button>
                         )}
                         {canManageNotas && (
-                          <button data-testid={`delete-nota-${nota.id}`} onClick={() => handleDelete(nota.id)}
+                          <button onClick={() => handleDelete(nota.id)}
                             className="p-1.5 hover:bg-red-600/20 rounded text-red-400 transition-colors" title="Excluir">
                             <Trash2 className="h-4 w-4" />
                           </button>

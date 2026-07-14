@@ -36,8 +36,7 @@ function NotaSelector() {
       ) : (
         <div className="grid gap-3">
           {available.map(nota => (
-            <button key={nota.id} data-testid={`select-nota-${nota.id}`}
-              onClick={() => navigate(`/conferencia/${nota.id}`)}
+            <button key={nota.id} onClick={() => navigate(`/conferencia/${nota.id}`)}
               className="bg-[#121212] border border-[#27272A] rounded-md p-4 text-left hover:border-blue-500/40 transition-all group">
               <div className="flex items-center justify-between">
                 <div>
@@ -61,7 +60,7 @@ function ConferenceGame({ notaId }) {
   const [nota, setNota] = useState(null);
   const [itens, setItens] = useState([]);
   const [activeItem, setActiveItem] = useState(null);
-  const [feedback, setFeedback] = useState(null); // {kind: 'erro'|'aviso'|'completo', title, sub}
+  const [feedback, setFeedback] = useState(null);
   const [scanValue, setScanValue] = useState('');
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
   const [operadorNome, setOperadorNome] = useState('');
@@ -87,7 +86,6 @@ function ConferenceGame({ notaId }) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Keep scanner input always focused during conference (pause when dialog open)
   useEffect(() => {
     if (nota?.status !== 'em_conferencia' || finalizeDialogOpen) return;
     const t = setInterval(() => {
@@ -181,7 +179,6 @@ function ConferenceGame({ notaId }) {
     } catch (e) { toast.error('Erro ao finalizar'); }
   };
 
-  // Derived values — memoized to avoid recalculating on every render/scan.
   const itensCompletos = useMemo(
     () => itens.filter(i => i.quantidade > 0 && i.quantidade_conferida >= i.quantidade).length,
     [itens]
@@ -197,7 +194,6 @@ function ConferenceGame({ notaId }) {
   const isActive = nota.status === 'em_conferencia';
   const isDone = ['conferida', 'divergente'].includes(nota.status);
 
-  // ── Start screen ──
   if (!isActive && !isDone) {
     return (
       <div className="space-y-6">
@@ -206,7 +202,7 @@ function ConferenceGame({ notaId }) {
           <ScanBarcode className="h-16 w-16 mx-auto mb-6 text-blue-400" />
           <h2 className="text-2xl text-[#F4F4F5] font-semibold mb-2">Pronto para conferir</h2>
           <p className="text-zinc-500 mb-8">{itens.length} itens vinculados. Pegue o leitor de codigo de barras e clique em iniciar.</p>
-          <button data-testid="start-conference-button" onClick={handleStart}
+          <button onClick={handleStart}
             className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 text-white text-xl font-semibold rounded-lg hover:bg-blue-500 transition-colors">
             <PlayCircle className="h-7 w-7" /> Iniciar Conferencia
           </button>
@@ -215,7 +211,6 @@ function ConferenceGame({ notaId }) {
     );
   }
 
-  // ── Done screen ──
   if (isDone) {
     return (
       <div className="space-y-6">
@@ -228,7 +223,7 @@ function ConferenceGame({ notaId }) {
           <p className="text-zinc-500 mb-2">{itensCompletos} de {itens.length} itens conferidos</p>
           {nota.operador_conferencia && <p className="text-zinc-400 mb-6 text-sm">Conferido por: <span className="text-[#F4F4F5] font-semibold">{nota.operador_conferencia}</span></p>}
           <div className="flex items-center justify-center gap-3">
-            <button data-testid="print-report-button" onClick={() => navigate(`/relatorio/${notaId}`)}
+            <button onClick={() => navigate(`/relatorio/${notaId}`)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-500 transition-colors font-semibold">
               <Printer className="h-5 w-5" /> Imprimir Relatorio
             </button>
@@ -242,7 +237,6 @@ function ConferenceGame({ notaId }) {
     );
   }
 
-  // ── Game screen ──
   const pctItem = activeItem && activeItem.quantidade > 0
     ? Math.min(100, Math.round((activeItem.quantidade_conferida / activeItem.quantidade) * 100)) : 0;
 
@@ -257,7 +251,7 @@ function ConferenceGame({ notaId }) {
           <p className="text-zinc-500 text-xs">{nota.fornecedor_nome}</p>
         </div>
         <div className="ml-auto">
-          <button data-testid="finalize-button" onClick={handleFinalize}
+          <button onClick={handleFinalize}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm transition-colors ${
               allComplete ? 'bg-green-600 text-white hover:bg-green-500' : 'bg-[#1A1A1A] text-zinc-400 border border-zinc-800 hover:bg-zinc-800'
             }`}>
@@ -266,18 +260,16 @@ function ConferenceGame({ notaId }) {
         </div>
       </div>
 
-      {/* Overall progress */}
       <div className="bg-[#121212] border border-[#27272A] rounded-md p-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Progresso da Conferencia</span>
-          <span className="font-mono text-lg text-[#F4F4F5] font-bold" data-testid="overall-progress">{itensCompletos} / {itens.length} itens</span>
+          <span className="font-mono text-lg text-[#F4F4F5] font-bold">{itensCompletos} / {itens.length} itens</span>
         </div>
         <Progress value={progressPct} className={`h-4 bg-[#1A1A1A] ${progressPct === 100 ? '[&>div]:bg-green-500' : '[&>div]:bg-blue-500'}`} />
       </div>
 
-      {/* Feedback banner */}
       {feedback && (
-        <div data-testid="feedback-banner" className={`rounded-lg p-5 flex items-center gap-4 border-2 ${
+        <div className={`rounded-lg p-5 flex items-center gap-4 border-2 ${
           feedback.kind === 'erro' ? 'bg-red-500/10 border-red-500 text-red-400' :
           feedback.kind === 'aviso' ? 'bg-yellow-500/10 border-yellow-500 text-yellow-400' :
           'bg-green-500/10 border-green-500 text-green-400'
@@ -290,21 +282,20 @@ function ConferenceGame({ notaId }) {
         </div>
       )}
 
-      {/* Main game display */}
       <div className={`bg-[#121212] border-2 rounded-lg min-h-[380px] flex flex-col items-center justify-center p-8 text-center transition-colors ${
         feedback?.kind === 'erro' ? 'border-red-500/60' : activeItem ? 'border-blue-500/50' : allComplete ? 'border-green-500/60' : 'border-[#27272A]'
       }`}>
         {activeItem ? (
-          <div className="w-full max-w-3xl space-y-5" data-testid="active-item-display">
+            <div className="w-full max-w-3xl space-y-5">
             <p className="text-[11px] uppercase tracking-[0.2em] text-blue-400">Codigo Interno</p>
-            <p className="font-mono text-6xl sm:text-8xl font-bold text-[#F4F4F5] leading-none" data-testid="active-item-codigo">
+            <p className="font-mono text-6xl sm:text-8xl font-bold text-[#F4F4F5] leading-none">
               {activeItem.produto_interno_codigo}
             </p>
-            <p className="text-2xl sm:text-3xl text-zinc-300" data-testid="active-item-descricao">
+            <p className="text-2xl sm:text-3xl text-zinc-300">
               {activeItem.produto_interno_descricao || activeItem.descricao_nfe}
             </p>
             <div className="flex items-end justify-center gap-3">
-              <span className="font-mono text-7xl sm:text-8xl font-bold text-blue-400" data-testid="active-item-contagem">
+              <span className="font-mono text-7xl sm:text-8xl font-bold text-blue-400">
                 {Number(activeItem.quantidade_conferida)}
               </span>
               <span className="font-mono text-4xl text-zinc-500 pb-2">/ {Number(activeItem.quantidade)} {activeItem.unidade}</span>
@@ -314,13 +305,13 @@ function ConferenceGame({ notaId }) {
               <span className="font-mono text-lg">Cod. Nota: <span className="text-zinc-300">{activeItem.cprod}</span></span>
               {activeItem.ean && <span className="font-mono text-lg">EAN: <span className="text-zinc-300">{activeItem.ean}</span></span>}
             </div>
-            <button data-testid="skip-item-button" onClick={(e) => { e.stopPropagation(); handleSkip(); }}
+            <button onClick={(e) => { e.stopPropagation(); handleSkip(); }}
               className="inline-flex items-center gap-2 px-4 py-2 mt-2 bg-[#1A1A1A] border border-zinc-700 text-zinc-400 rounded-md text-sm hover:bg-zinc-800 hover:text-zinc-200 transition-colors">
               <SkipForward className="h-4 w-4" /> Pular (sem quantidade)
             </button>
           </div>
         ) : allComplete ? (
-          <div className="space-y-5" data-testid="all-complete-display">
+          <div className="space-y-5">
             <CheckCircle2 className="h-20 w-20 mx-auto text-green-400" />
             <p className="text-4xl sm:text-5xl font-bold text-green-400">TODOS OS ITENS CONFERIDOS!</p>
             <p className="text-zinc-400 text-lg">Clique em Finalizar para encerrar a conferencia.</p>
@@ -330,7 +321,7 @@ function ConferenceGame({ notaId }) {
             </button>
           </div>
         ) : (
-          <div className="space-y-4" data-testid="waiting-display">
+          <div className="space-y-4">
             <ScanBarcode className="h-20 w-20 mx-auto text-blue-400 animate-pulse" />
             <p className="text-3xl sm:text-4xl font-bold text-[#F4F4F5]">BIPE UM PRODUTO</p>
             <p className="text-zinc-500 text-lg">Aponte o leitor para o codigo de barras de qualquer produto da nota</p>
@@ -338,10 +329,9 @@ function ConferenceGame({ notaId }) {
         )}
       </div>
 
-      {/* Scanner input (always focused) */}
       <div className="bg-[#0A0A0A] border border-[#27272A] rounded-md p-3 flex items-center gap-3">
         <ScanBarcode className="h-5 w-5 text-blue-400 shrink-0" />
-        <input ref={scannerRef} data-testid="scanner-input" value={scanValue}
+        <input ref={scannerRef} value={scanValue}
           onChange={e => setScanValue(e.target.value)} onKeyDown={handleScan}
           placeholder="Leitor ativo - bipe o codigo de barras..."
           autoComplete="off"
@@ -349,14 +339,13 @@ function ConferenceGame({ notaId }) {
         <span className="text-[10px] uppercase tracking-widest text-green-500">scanner ativo</span>
       </div>
 
-      {/* Items status grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {itens.map(item => {
           const complete = item.quantidade > 0 && item.quantidade_conferida >= item.quantidade;
           const partial = !complete && item.quantidade_conferida > 0;
           const active = activeItem?.id === item.id;
           return (
-            <div key={item.id} data-testid={`item-chip-${item.id}`}
+            <div key={item.id}
               className={`rounded-md border p-2.5 text-left ${
                 active ? 'border-blue-500 bg-blue-500/10' :
                 complete ? 'border-green-500/40 bg-green-500/5' :

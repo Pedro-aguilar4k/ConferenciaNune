@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { Trash2, Link2, Filter } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { TEST_IDS } from '@/constants/testIds';
 import { API } from '@/lib/api';
 
 export default function Equivalences() {
@@ -21,12 +20,10 @@ export default function Equivalences() {
     } catch (e) { console.error(e); }
   }, [filterCnpj]);
 
-  // Fetch fornecedores once (independent of filter changes)
   useEffect(() => {
     axios.get(`${API}/fornecedores`).then(r => setFornecedores(r.data)).catch(console.error);
   }, []);
 
-  // Single effect handles mount + filter changes, avoiding duplicate calls.
   useEffect(() => { fetchEquivalencias(); }, [fetchEquivalencias]);
 
   const handleDelete = async (id) => {
@@ -69,7 +66,7 @@ export default function Equivalences() {
             <p className="text-xs mt-1">Os vinculos sao criados automaticamente ao confirmar produtos durante a conferencia</p>
           </div>
         ) : (
-          <Table data-testid={TEST_IDS.equivalencesTable}>
+          <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent border-[#27272A]">
                 <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Fornecedor</TableHead>
@@ -91,7 +88,7 @@ export default function Equivalences() {
                   <TableCell className="text-sm text-[#F4F4F5] max-w-[180px] truncate">{eq.produto_interno_descricao}</TableCell>
                   <TableCell className="text-xs text-zinc-500">{eq.created_at ? new Date(eq.created_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
                   <TableCell>
-                    <button data-testid={`delete-eq-${eq.id}`} onClick={() => handleDelete(eq.id)}
+                    <button onClick={() => handleDelete(eq.id)}
                       className="p-1.5 hover:bg-red-600/20 rounded text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                   </TableCell>
                 </TableRow>

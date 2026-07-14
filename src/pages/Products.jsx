@@ -5,7 +5,6 @@ import { Search, Plus, Pencil, Trash2, Package, FileSpreadsheet } from 'lucide-r
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { TEST_IDS } from '@/constants/testIds';
 import { API } from '@/lib/api';
 
 const emptyForm = { codigo: '', descricao: '', ean: '', unidade: 'UN', preco: 0, categoria: '' };
@@ -82,11 +81,11 @@ export default function Products() {
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Produtos</h1>
         <div className="flex items-center gap-2">
-          <button data-testid="export-excel-button" onClick={handleExportExcel} disabled={exporting}
+          <button onClick={handleExportExcel} disabled={exporting}
             className="flex items-center gap-2 px-4 py-2 bg-green-700 text-white hover:bg-green-600 rounded-md text-sm transition-colors disabled:opacity-50">
             <FileSpreadsheet className="h-4 w-4" /> {exporting ? 'Gerando...' : 'Baixar Excel'}
           </button>
-          <button data-testid={TEST_IDS.addProductButton} onClick={openAdd}
+          <button onClick={openAdd}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-500 rounded-md text-sm transition-colors">
             <Plus className="h-4 w-4" /> Novo Produto
           </button>
@@ -95,7 +94,7 @@ export default function Products() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-        <Input data-testid={TEST_IDS.productSearchInput} value={search} onChange={e => setSearch(e.target.value)}
+        <Input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por codigo, descricao ou EAN..."
           className="pl-10 bg-[#121212] border-[#27272A] text-[#F4F4F5] placeholder:text-zinc-600 focus:border-blue-500" />
       </div>
@@ -107,7 +106,7 @@ export default function Products() {
             <p>Nenhum produto encontrado</p>
           </div>
         ) : (
-          <Table data-testid={TEST_IDS.productsTable}>
+          <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent border-[#27272A]">
                 <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Codigo</TableHead>
@@ -130,9 +129,9 @@ export default function Products() {
                   <TableCell className="text-sm text-zinc-500">{p.categoria || '-'}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <button data-testid={`edit-product-${p.id}`} onClick={() => openEdit(p)}
+                      <button onClick={() => openEdit(p)}
                         className="p-1.5 hover:bg-blue-600/20 rounded text-blue-400 transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
-                      <button data-testid={`delete-product-${p.id}`} onClick={() => handleDelete(p.id)}
+                      <button onClick={() => handleDelete(p.id)}
                         className="p-1.5 hover:bg-red-600/20 rounded text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </TableCell>
@@ -154,40 +153,40 @@ export default function Products() {
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Codigo *</label>
                 <Input value={form.codigo} onChange={e => setForm({...form, codigo: e.target.value})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="product-form-codigo" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">EAN</label>
                 <Input value={form.ean} onChange={e => setForm({...form, ean: e.target.value})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="product-form-ean" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
             </div>
             <div>
               <label className="text-xs text-zinc-500 mb-1 block">Descricao *</label>
               <Input value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})}
-                className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="product-form-descricao" />
+                className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Unidade</label>
                 <Input value={form.unidade} onChange={e => setForm({...form, unidade: e.target.value})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="product-form-unidade" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Preco</label>
                 <Input type="number" step="0.01" value={form.preco} onChange={e => setForm({...form, preco: parseFloat(e.target.value) || 0})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="product-form-preco" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Categoria</label>
                 <Input value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})}
-                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" data-testid="product-form-categoria" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-2">
             <button onClick={() => setDialogOpen(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors">Cancelar</button>
-            <button data-testid="product-form-save" onClick={handleSave}
+            <button onClick={handleSave}
               className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-500 transition-colors">
               {editing ? 'Salvar' : 'Criar'}
             </button>

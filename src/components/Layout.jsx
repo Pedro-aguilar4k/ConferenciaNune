@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, ClipboardCheck, Package, Truck, Link2, Brain, Users, ChevronLeft, ChevronRight, Menu, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, ClipboardCheck, Package, Truck, Link2, Brain, Users, ChevronLeft, ChevronRight, Menu, X, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth, PERM } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Visão geral', permission: null },
@@ -40,6 +41,7 @@ export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
+  const { resolvedTheme, toggleTheme } = useTheme();
   useEffect(() => setMobileOpen(false), [location.pathname]);
   const visibleItems = navItems.filter(item => !item.permission || hasPermission(item.permission));
   const page = routeTitles.find(item => item.match.test(location.pathname)) || routeTitles[0];
@@ -78,7 +80,14 @@ export default function Layout({ children }) {
         <header className="app-topbar">
           <button onClick={() => setMobileOpen(true)} className="app-icon-button md:hidden" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
           <div className="min-w-0"><p className="text-[9px] font-bold tracking-[0.17em] text-[#8a91a0] uppercase">{page.eyebrow}</p><p className="truncate text-sm font-semibold text-[#101426]">{page.title}</p></div>
-          <div className="ml-auto flex items-center gap-3"><span className="hidden sm:flex items-center gap-2 text-[10px] font-semibold tracking-wider text-[#737b8d] uppercase"><i className="h-1.5 w-1.5 rounded-full bg-[#e56024]" />Sistema online</span><div className="hidden sm:block h-6 w-px bg-[#dfe3eb]" /><Brand compact /></div>
+          <div className="ml-auto flex items-center gap-3">
+            <span className="hidden sm:flex items-center gap-2 text-[10px] font-semibold tracking-wider text-[#737b8d] uppercase"><i className="h-1.5 w-1.5 rounded-full bg-[#e56024]" />Sistema online</span>
+            <div className="hidden sm:block h-6 w-px bg-[#dfe3eb]" />
+            <button onClick={toggleTheme} className="app-icon-button" aria-label={resolvedTheme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} title={resolvedTheme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+              {resolvedTheme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+            </button>
+            <Brand compact />
+          </div>
         </header>
         <main className="min-h-0 flex-1 overflow-auto"><div className="app-content mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">{children}</div></main>
       </div>

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Moon, ShieldCheck, Sun } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Login() {
   const { login, user } = useAuth();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState('');
@@ -44,9 +46,14 @@ export default function Login() {
             <p className="login-brand-detail">Auto Peças</p>
           </div>
         </div>
-        <div className="login-environment">
-          <span className="login-environment-dot" aria-hidden="true" />
-          Ambiente interno
+        <div className="flex items-center gap-3">
+          <div className="login-environment">
+            <span className="login-environment-dot" aria-hidden="true" />
+            Ambiente interno
+          </div>
+          <button type="button" onClick={toggleTheme} className="login-theme-toggle" aria-label={resolvedTheme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} title={resolvedTheme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+            {resolvedTheme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+          </button>
         </div>
       </header>
 

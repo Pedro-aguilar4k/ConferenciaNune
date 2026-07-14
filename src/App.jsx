@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import Layout from "@/components/Layout";
 import { AuthProvider, PERM, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -49,8 +50,9 @@ function Protected({ children, permission }) {
 }
 
 function App() {
+  const { resolvedTheme } = useTheme();
   return (
-    <div className="App dark">
+    <div className="App">
       <AuthProvider>
         <RoutePreloader />
         <BrowserRouter>
@@ -73,7 +75,7 @@ function App() {
           </Suspense>
         </BrowserRouter>
       </AuthProvider>
-      <Toaster theme="dark" position="top-right" richColors />
+      <Toaster theme={resolvedTheme} position="top-right" richColors />
     </div>
   );
 }

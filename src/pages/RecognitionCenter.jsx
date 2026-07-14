@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Brain, Check, X, Eye, ChevronDown, ChevronUp, Filter, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { API } from '@/lib/api';
+import { fetchJson, queryKeys, listQueryOptions } from '@/lib/queries';
 
 const confiancaBadge = (score) => {
   if (score >= 90) return 'bg-green-500/10 text-green-400 border-green-500/20';
@@ -18,9 +20,7 @@ const confiancaBadge = (score) => {
 };
 
 export default function RecognitionCenter() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fornecedores, setFornecedores] = useState([]);
+  const queryClient = useQueryClient();
   const [filterCnpj, setFilterCnpj] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [matchDialogOpen, setMatchDialogOpen] = useState(false);
@@ -29,21 +29,19 @@ export default function RecognitionCenter() {
   const [productSearch, setProductSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  const fetchItems = useCallback(async () => {
-    try {
-      const params = {};
-      if (filterCnpj && filterCnpj !== 'all') params.fornecedor_cnpj = filterCnpj;
-      const res = await axios.get(`${API}/reconhecimento`, { params });
-      setItems(res.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, [filterCnpj]);
+  const { data: items = [], isPending: loading } = useQuery({
+    queryKey: queryKeys.reconhecimento(filterCnpj !== 'all' ? filterCnpj : undefined),
+    queryFn: () => fetchJson('/reconhecimento', { params: filterCnpj !== 'all' ? { fornecedor_cnpj: filterCnpj } : {} }),
+    ...listQueryOptions,
+  });
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: queryKeys.fornecedores(),
+    queryFn: () => fetchJson('/fornecedores'),
+    ...listQueryOptions,
+  });
 
-  useEffect(() => {
-    axios.get(`${API}/fornecedores`).then(r => setFornecedores(r.data)).catch(console.error);
-  }, []);
+  const fetchItems = () => queryClient.invalidateQueries({ queryKey: ['reconhecimento'] });
 
   const handleConfirm = async (item, produtoId) => {
     try {

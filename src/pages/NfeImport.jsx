@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, FileText, Trash2, ClipboardCheck, Link2, Search, FileBarChart2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { API } from '@/lib/api';
+import { fetchJson, queryKeys, listQueryOptions } from '@/lib/queries';
+import TableSkeleton from '@/components/TableSkeleton';
 import SefazImport from '@/components/SefazImport';
 import { useAuth, PERM } from '@/contexts/AuthContext';
 
@@ -17,7 +20,7 @@ const statusMap = {
 };
 
 export default function NfeImport() {
-  const [notas, setNotas] = useState([]);
+  const queryClient = useQueryClient();
   const [busca, setBusca] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -25,14 +28,13 @@ export default function NfeImport() {
   const { hasPermission } = useAuth();
   const canManageNotas = hasPermission(PERM.NOTAS);
 
-  useEffect(() => { fetchNotas(); }, []);
+  const { data: notas = [], isPending, isFetching } = useQuery({
+    queryKey: queryKeys.notas,
+    queryFn: () => fetchJson('/notas'),
+    ...listQueryOptions,
+  });
 
-  const fetchNotas = async () => {
-    try {
-      const res = await axios.get(`${API}/notas`);
-      setNotas(res.data);
-    } catch (e) { console.error(e); }
-  };
+  const fetchNotas = () => queryClient.invalidateQueries({ queryKey: queryKeys.notas });
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -96,7 +98,7 @@ export default function NfeImport() {
         </>
       )}
 
-      <div className="bg-[#121212] border border-[#27272A] rounded-md">
+      <div className="bg-[#121212] border border-[#27272A] rounded-md" data-refetching={isFetching ? 'true' : undefined}>
         <div className="p-4 border-b border-[#27272A] flex items-center gap-3">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 shrink-0">Notas Importadas ({notas.length})</h3>
           <div className="relative ml-auto w-full max-w-xs">
@@ -110,7 +112,9 @@ export default function NfeImport() {
             />
           </div>
         </div>
-        {notas.length === 0 ? (
+        {isPending ? (
+          <div className="p-4"><TableSkeleton rows={6} cols={7} /></div>
+        ) : notas.length === 0 ? (
           <div className="p-8 text-center text-zinc-600">
             <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>Nenhuma nota importada</p>

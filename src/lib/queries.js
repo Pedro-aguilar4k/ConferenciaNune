@@ -10,10 +10,13 @@ export async function fetchJson(path, config) {
 // Chaves de cache centralizadas para reuso e prefetch.
 export const queryKeys = {
   dashboard: ["dashboard"],
-  produtos: ["produtos"],
+  produtos: (search) => (search ? ["produtos", search] : ["produtos"]),
   notas: ["notas"],
-  fornecedores: ["fornecedores"],
-  equivalencias: ["equivalencias"],
+  fornecedores: (search) => (search ? ["fornecedores", search] : ["fornecedores"]),
+  equivalencias: (params) => (params ? ["equivalencias", params] : ["equivalencias"]),
+  reconhecimento: (params) => (params ? ["reconhecimento", params] : ["reconhecimento"]),
+  usuarios: ["usuarios"],
+  roles: ["roles"],
 };
 
 // Configuração compartilhada: mantém dados por alguns minutos e revalida em segundo plano.
@@ -26,9 +29,11 @@ export const listQueryOptions = {
 
 // Pré-carrega os dados mais acessados para que a navegação seja instantânea.
 export function prefetchCoreData(queryClient) {
-  queryClient.prefetchQuery({
-    queryKey: queryKeys.dashboard,
-    queryFn: () => fetchJson("/dashboard"),
-    ...listQueryOptions,
-  });
+  const warm = (key, path) =>
+    queryClient.prefetchQuery({ queryKey: key, queryFn: () => fetchJson(path), ...listQueryOptions });
+
+  warm(queryKeys.dashboard, "/dashboard");
+  warm(queryKeys.notas, "/notas");
+  warm(queryKeys.produtos(), "/produtos");
+  warm(queryKeys.fornecedores(), "/fornecedores");
 }

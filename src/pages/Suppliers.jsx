@@ -1,34 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Pencil, Trash2, Truck } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { API } from '@/lib/api';
+import { fetchJson, queryKeys, listQueryOptions } from '@/lib/queries';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import TableSkeleton from '@/components/TableSkeleton';
 
 const emptyForm = { cnpj: '', nome: '', contato: '', email: '', telefone: '' };
 
 export default function Suppliers() {
-  const [fornecedores, setFornecedores] = useState([]);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
-  const fetchFornecedores = useCallback(async (term) => {
-    try {
-      const q = term !== undefined ? term : search;
-      const res = await axios.get(`${API}/fornecedores`, { params: q ? { search: q } : {} });
-      setFornecedores(res.data);
-    } catch (e) { console.error(e); }
-  }, [search]);
+  const { data: fornecedores = [], isPending, isFetching } = useQuery({
+    queryKey: queryKeys.fornecedores(debouncedSearch),
+    queryFn: () => fetchJson('/fornecedores', { params: debouncedSearch ? { search: debouncedSearch } : {} }),
+    ...listQueryOptions,
+  });
 
-  // Single debounced effect: covers both mount and subsequent search changes.
-  useEffect(() => {
-    const t = setTimeout(() => fetchFornecedores(search), 300);
-    return () => clearTimeout(t);
-  }, [search, fetchFornecedores]);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (f) => { setEditing(f); setForm({ cnpj: f.cnpj, nome: f.nome, contato: f.contato || '', email: f.email || '', telefone: f.telefone || '' }); setDialogOpen(true); };
@@ -43,7 +42,7 @@ export default function Suppliers() {
         toast.success('Fornecedor criado');
       }
       setDialogOpen(false);
-      fetchFornecedores();
+      invalidate();
     } catch (e) { toast.error(e.response?.data?.detail || 'Erro'); }
   };
 
@@ -51,7 +50,7 @@ export default function Suppliers() {
     try {
       await axios.delete(`${API}/fornecedores/${id}`);
       toast.success('Fornecedor removido');
-      fetchFornecedores();
+      invalidate();
     } catch (e) { toast.error('Erro ao remover'); }
   };
 
@@ -72,7 +71,8 @@ export default function Suppliers() {
           className="pl-10 bg-[#121212] border-[#27272A] text-[#F4F4F5] placeholder:text-zinc-600 focus:border-blue-500" />
       </div>
 
-      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden">
+      {isPending ? <TableSkeleton rows={6} cols={5} /> : (
+      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden" data-refetching={isFetching ? 'true' : undefined}>
         {fornecedores.length === 0 ? (
           <div className="p-8 text-center text-zinc-600">
             <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -110,6 +110,7 @@ export default function Suppliers() {
           </Table>
         )}
       </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5]">

@@ -31,6 +31,9 @@ class CertInfo:
     not_after: str
 
 class SefazError(Exception):
+    pass
+
+
 def validar_certificado(pfx_bytes: bytes, senha: str) -> CertInfo:
     try:
         _key, cert, _add = crypto_pkcs12.load_key_and_certificates(

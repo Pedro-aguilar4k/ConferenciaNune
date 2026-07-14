@@ -117,7 +117,6 @@ export default function ProductBinding() {
         </div>
       </div>
 
-      {/* Progress */}
       <div className="bg-[#121212] border border-[#27272A] rounded-md p-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Produtos Vinculados</span>

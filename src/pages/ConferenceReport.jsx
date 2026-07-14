@@ -108,11 +108,9 @@ export default function ConferenceReport() {
         </div>
       </div>
 
-      {/* A4 sheet */}
       <div id="report-a4-sheet" className="mx-auto my-6 print:my-0 bg-white text-black shadow-xl print:shadow-none"
         style={{ width: '210mm', padding: '14mm 12mm' }}>
 
-        {/* Header */}
         <div className="border-b-2 border-black pb-3 mb-4 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">RELATORIO DE CONFERENCIA</h1>
@@ -124,7 +122,6 @@ export default function ConferenceReport() {
           </div>
         </div>
 
-        {/* Result banner */}
         <div className={`border-2 rounded p-3 mb-4 flex items-center gap-3 ${resumo.tudo_ok ? 'border-green-600 bg-green-50' : 'border-red-600 bg-red-50'}`}>
           {resumo.tudo_ok
             ? <CheckCircle2 className="h-8 w-8 text-green-600 shrink-0" />
@@ -139,7 +136,6 @@ export default function ConferenceReport() {
           </div>
         </div>
 
-        {/* Info grid */}
         <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-4">
           <div className="col-span-2 font-bold uppercase text-xs tracking-widest text-gray-500 border-b border-gray-300 pb-1 mb-1">Dados da Conferencia</div>
           <p><span className="text-gray-600">Estoquista:</span> <span className="font-semibold">{nota.operador_conferencia || 'Nao informado'}</span></p>
@@ -157,7 +153,6 @@ export default function ConferenceReport() {
           {nota.chave && <p className="col-span-2"><span className="text-gray-600">Chave de acesso:</span> <span className="font-mono text-xs">{nota.chave}</span></p>}
         </div>
 
-        {/* Items table */}
         <div className="font-bold uppercase text-xs tracking-widest text-gray-500 border-b border-gray-300 pb-1 mb-2">Produtos Conferidos ({resumo.total_itens})</div>
         <table className="w-full text-xs border-collapse mb-6">
           <thead>
@@ -196,7 +191,6 @@ export default function ConferenceReport() {
           </tbody>
         </table>
 
-        {/* Divergence notes */}
         {itens.some(i => i.justificativa) && (
           <div className="mb-6 text-xs">
             <div className="font-bold uppercase tracking-widest text-gray-500 border-b border-gray-300 pb-1 mb-2">Justificativas de Divergencia</div>
@@ -206,7 +200,6 @@ export default function ConferenceReport() {
           </div>
         )}
 
-        {/* Signatures */}
         <div className="grid grid-cols-2 gap-16 mt-16 text-center text-sm">
           <div>
             <div className="border-t border-black pt-1">{nota.operador_conferencia || 'Estoquista'}</div>

@@ -6,8 +6,7 @@ import { Upload, FileText, Trash2, ClipboardCheck, Link2, Search, FileBarChart2 
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { TEST_IDS } from '@/constants/testIds';
-
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+import { API } from '@/lib/api';
 
 const statusMap = {
   pendente: { label: 'Pendente', class: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },

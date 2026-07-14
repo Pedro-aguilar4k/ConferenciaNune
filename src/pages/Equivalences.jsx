@@ -5,8 +5,7 @@ import { Trash2, Link2, Filter } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { TEST_IDS } from '@/constants/testIds';
-
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+import { API } from '@/lib/api';
 
 export default function Equivalences() {
   const [equivalencias, setEquivalencias] = useState([]);

@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Printer, ArrowLeft, CheckCircle2, AlertTriangle, Save } from 'lucide-react';
-
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+import { API } from '@/lib/api';
 
 const fmtDateTime = (iso) => {
   if (!iso) return '-';

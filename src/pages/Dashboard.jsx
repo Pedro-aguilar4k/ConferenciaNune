@@ -4,8 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { FileCheck, Clock, AlertTriangle, Link2, Target, Zap, Brain } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { TEST_IDS } from '@/constants/testIds';
-
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+import { API } from '@/lib/api';
 
 export default function Dashboard() {
   const [data, setData] = useState(null);

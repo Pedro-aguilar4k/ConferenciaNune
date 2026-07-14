@@ -5,8 +5,7 @@ import { toast } from 'sonner';
 import { ScanBarcode, ArrowLeft, PlayCircle, StopCircle, CheckCircle2, XCircle, SkipForward, PackageCheck, Printer } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+import { API } from '@/lib/api';
 
 export default function Conference() {
   const { notaId } = useParams();

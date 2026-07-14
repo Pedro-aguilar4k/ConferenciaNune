@@ -62,7 +62,8 @@
   },
   "scripts": {
     "start": "vite",
-    "dev": "vite",
+    "dev": "bash scripts/dev.sh",
+    "dev:frontend": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "vercel-build": "vite build",

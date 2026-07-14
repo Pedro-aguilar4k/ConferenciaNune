@@ -9,10 +9,11 @@ if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
 
 from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+import asyncio
 import logging
 from pydantic import BaseModel, Field, ConfigDict, BeforeValidator
 from typing import List, Optional, Annotated
@@ -23,11 +24,37 @@ from services.matching import match_product as _match_product
 from services.xml_parser import parse_nfe_xml
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+PROJECT_ROOT = ROOT_DIR.parent
 
-mongo_url = os.environ['MONGO_URL_2']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME_2']]
+# Carrega variaveis de ambiente de multiplas fontes (sem sobrescrever as ja definidas):
+# backend/.env (local), e os arquivos .env do projeto (usados pelo v0/Vercel dev).
+load_dotenv(ROOT_DIR / '.env')
+for _env_file in ('.env.development.local', '.env.local', '.env'):
+    _p = PROJECT_ROOT / _env_file
+    if _p.exists():
+        load_dotenv(_p, override=False)
+
+mongo_url = os.environ.get('MONGO_URL_2')
+db_name = os.environ.get('DB_NAME_2')
+
+if not mongo_url or not db_name:
+    raise RuntimeError(
+        "MONGO_URL_2 e DB_NAME_2 precisam estar definidos no ambiente. "
+        "Configure-os nas variaveis do projeto (Vars) com a connection string do MongoDB Atlas."
+    )
+
+# Cliente resiliente: pool de conexoes + timeouts curtos para nao travar requisicoes
+client = AsyncIOMotorClient(
+    mongo_url,
+    maxPoolSize=50,
+    minPoolSize=0,
+    serverSelectionTimeoutMS=8000,
+    connectTimeoutMS=8000,
+    socketTimeoutMS=20000,
+    retryWrites=True,
+    tz_aware=True,
+)
+db = client[db_name]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -1097,6 +1124,20 @@ async def get_sample_xml():
     return {"xml": xml}
 
 # ── App Config ─────────────────────────────────────────────────────
+@api_router.get("/health")
+async def health():
+    """Verifica conectividade com o MongoDB."""
+    try:
+        await client.admin.command("ping")
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Health check falhou: {e}")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "database": "disconnected", "detail": str(e)},
+        )
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -1109,25 +1150,34 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    await db.produtos.create_index("codigo")
-    await db.produtos.create_index("ean")
-    await db.produtos.create_index("ativo")
-    await db.fornecedores.create_index("cnpj")
-    await db.itens_nota.create_index("nota_id")
-    await db.itens_nota.create_index([("produto_interno_id", 1)])
-    await db.itens_nota.create_index([("cprod", 1), ("produto_interno_codigo", 1)])
-    await db.itens_nota.create_index("metodo_identificacao")
-    await db.itens_nota.create_index("ignorado")
-    await db.notas.create_index("chave")
-    await db.notas.create_index("status")
-    await db.notas.create_index("fornecedor_cnpj")
-    await db.notas.create_index([("created_at", -1)])
-    await db.notas.create_index("conferencia_fim")
-    await db.equivalencia_produtos.create_index([("fornecedor_cnpj", 1), ("codigo_fornecedor", 1)])
-    await db.historico_leituras.create_index("nota_id")
-    await db.historico_aprendizado.create_index("fornecedor_cnpj")
-    await db.historico_aprendizado.create_index("created_at")
-    logger.info("NF-e Conference System v2.0 started - Intelligent Matching Engine")
+    # Nao deixa a criacao de indices derrubar o boot do servidor caso o
+    # banco esteja momentaneamente indisponivel.
+    try:
+        await client.admin.command("ping")
+        await asyncio.gather(
+            db.produtos.create_index("codigo"),
+            db.produtos.create_index("ean"),
+            db.produtos.create_index("ativo"),
+            db.fornecedores.create_index("cnpj"),
+            db.itens_nota.create_index("nota_id"),
+            db.itens_nota.create_index([("produto_interno_id", 1)]),
+            db.itens_nota.create_index([("cprod", 1), ("produto_interno_codigo", 1)]),
+            db.itens_nota.create_index("metodo_identificacao"),
+            db.itens_nota.create_index("ignorado"),
+            db.notas.create_index("chave"),
+            db.notas.create_index("status"),
+            db.notas.create_index("fornecedor_cnpj"),
+            db.notas.create_index([("created_at", -1)]),
+            db.notas.create_index("conferencia_fim"),
+            db.equivalencia_produtos.create_index([("fornecedor_cnpj", 1), ("codigo_fornecedor", 1)]),
+            db.historico_leituras.create_index("nota_id"),
+            db.historico_aprendizado.create_index("fornecedor_cnpj"),
+            db.historico_aprendizado.create_index("created_at"),
+        )
+        logger.info("NF-e Conference System v2.0 started - Intelligent Matching Engine")
+    except Exception as e:
+        logger.error(f"Falha ao conectar/criar indices no MongoDB durante o startup: {e}")
+        logger.error("O servidor continuara ativo; verifique MONGO_URL_2 e o acesso de rede ao Atlas.")
 
 @app.on_event("shutdown")
 async def shutdown():

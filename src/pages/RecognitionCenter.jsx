@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { TEST_IDS } from '@/constants/testIds';
-
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+import { API } from '@/lib/api';
 
 const confiancaBadge = (score) => {
   if (score >= 90) return 'bg-green-500/10 text-green-400 border-green-500/20';

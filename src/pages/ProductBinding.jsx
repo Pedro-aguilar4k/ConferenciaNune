@@ -5,8 +5,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Check, Link2, PlayCircle, Brain, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+import { API } from '@/lib/api';
 
 const isValidEan = (ean) => ean && /^\d{8,14}$/.test(ean);
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function Login() {
   const { login, user } = useAuth();
@@ -34,23 +34,24 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D0E2A] px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] px-4">
+
+      <div className="w-full max-w-[360px]">
+
+        <div className="flex flex-col items-center mb-10">
           <img
             src="/logo-full.png"
             alt="NuneDiesel Auto Pecas"
-            className="h-28 object-contain mb-6"
+            className="h-24 object-contain"
+            style={{ filter: 'brightness(0) invert(1)' }}
           />
-          <p className="text-sm text-[#7B84E0] mt-1 tracking-wide">Sistema de Conferencia de NF-e</p>
+          <p className="text-xs text-zinc-500 mt-4 tracking-[0.12em] uppercase">Sistema de Conferencia de NF-e</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-[#12134A] border border-[#2D3090]/60 rounded-lg p-6 space-y-4"
-        >
+        <form onSubmit={handleSubmit} className="bg-[#111111] border border-zinc-800 rounded-lg p-6 space-y-4">
+
           <div className="space-y-1.5">
-            <label htmlFor="username" className="text-[11px] uppercase tracking-wider text-[#9BA0D0]">
+            <label htmlFor="username" className="block text-[10px] uppercase tracking-widest text-zinc-500">
               Usuario
             </label>
             <input
@@ -58,16 +59,16 @@ export default function Login() {
               type="text"
               autoComplete="username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={e => setUsername(e.target.value)}
               required
               autoFocus
-              className="w-full bg-[#0D0E2A] border border-[#2D3090]/60 rounded-md px-3 py-2.5 text-sm text-[#E8E9FF] placeholder:text-[#4B52C4]/60 focus:outline-none focus:border-[#4B52C4] transition-colors"
+              className="w-full bg-[#0A0A0A] border border-zinc-800 rounded-md px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-700 focus:outline-none focus:border-[#4B52C4] transition-colors"
               placeholder="seu.usuario"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="password" className="text-[11px] uppercase tracking-wider text-[#9BA0D0]">
+            <label htmlFor="password" className="block text-[10px] uppercase tracking-widest text-zinc-500">
               Senha
             </label>
             <input
@@ -75,39 +76,33 @@ export default function Login() {
               type="password"
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
               required
-              className="w-full bg-[#0D0E2A] border border-[#2D3090]/60 rounded-md px-3 py-2.5 text-sm text-[#E8E9FF] placeholder:text-[#4B52C4]/60 focus:outline-none focus:border-[#4B52C4] transition-colors"
+              className="w-full bg-[#0A0A0A] border border-zinc-800 rounded-md px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-700 focus:outline-none focus:border-[#4B52C4] transition-colors"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-md px-3 py-2">
+            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
               {error}
-            </div>
+            </p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-[#2D3090] hover:bg-[#3A42B0] disabled:opacity-60 disabled:cursor-not-allowed text-[#E8E9FF] text-sm font-semibold rounded-md px-4 py-2.5 transition-colors border border-[#4B52C4]/30"
+            className="w-full flex items-center justify-center gap-2 bg-[#2D3090] hover:bg-[#3A42B0] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-md px-4 py-2.5 transition-colors mt-2"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Entrando...
-              </>
-            ) : (
-              <>
-                <LogIn className="h-4 w-4" />
-                Entrar
-              </>
-            )}
+            {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Entrando...</> : 'Entrar'}
           </button>
+
         </form>
 
-        <p className="text-center text-[11px] text-[#4B52C4]/70 mt-6">NuneDiesel Auto Pecas &mdash; Conferencia v2.0</p>
+        <p className="text-center text-[10px] text-zinc-700 mt-6 tracking-wider uppercase">
+          NuneDiesel Auto Pecas &mdash; v2.0
+        </p>
+
       </div>
     </div>
   );

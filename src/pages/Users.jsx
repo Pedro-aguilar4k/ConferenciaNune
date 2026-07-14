@@ -19,7 +19,7 @@ import { UserPlus, Pencil, Trash2, Users as UsersIcon, ShieldCheck } from 'lucid
 const ROLE_STYLES = {
   admin: 'bg-red-500/15 text-red-400 border-red-500/20',
   gerente: 'bg-purple-500/15 text-purple-300 border-purple-500/20',
-  comprador: 'bg-blue-500/15 text-[#7B84E0] border-[#4B52C4]/30',
+  comprador: 'bg-blue-500/15 text-[#71717A] border-blue-500/20',
   estoquista: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
 };
 
@@ -110,18 +110,18 @@ export default function Users() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-heading text-xl font-semibold text-[#E8E9FF] tracking-tight flex items-center gap-2">
-            <UsersIcon className="h-5 w-5 text-[#7B84E0]" /> Usuários
+          <h2 className="font-heading text-xl font-semibold text-[#F4F4F5] tracking-tight flex items-center gap-2">
+            <UsersIcon className="h-5 w-5 text-[#71717A]" /> Usuários
           </h2>
-          <p className="text-sm text-[#7B84E0] mt-1">Gerencie contas e níveis de acesso do sistema.</p>
+          <p className="text-sm text-[#71717A] mt-1">Gerencie contas e níveis de acesso do sistema.</p>
         </div>
-        <Button onClick={openCreate} className="bg-[#2D3090] hover:bg-[#3A42B0] text-white">
+        <Button onClick={openCreate} className="bg-blue-600 hover:bg-blue-500 text-white">
           <UserPlus className="h-4 w-4 mr-2" /> Novo usuário
         </Button>
       </div>
 
-      <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md overflow-hidden">
-        <div className="p-4 border-b border-[#2D3090]/60">
+      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden">
+        <div className="p-4 border-b border-[#27272A]">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
             {loading ? 'Carregando...' : `${users.length} usuário(s)`}
           </h3>
@@ -129,17 +129,17 @@ export default function Users() {
         <div className="divide-y divide-[#27272A]">
           {users.map(u => (
             <div key={u.id} className="p-4 flex items-center gap-4 flex-wrap sm:flex-nowrap">
-              <div className="h-9 w-9 rounded-full bg-[#2D3090]/30 border border-[#4B52C4]/30 flex items-center justify-center flex-shrink-0">
-                <span className="text-sm font-semibold text-[#7B84E0]">{(u.nome || u.username).charAt(0).toUpperCase()}</span>
+              <div className="h-9 w-9 rounded-full bg-blue-600/30 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-semibold text-[#71717A]">{(u.nome || u.username).charAt(0).toUpperCase()}</span>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-medium text-[#E8E9FF] truncate">{u.nome}</p>
+                  <p className="text-sm font-medium text-[#F4F4F5] truncate">{u.nome}</p>
                   {u.id === currentUser?.id && (
-                    <span className="text-[10px] text-zinc-500 border border-[#2D3090]/60 rounded px-1.5 py-0.5">você</span>
+                    <span className="text-[10px] text-zinc-500 border border-[#27272A] rounded px-1.5 py-0.5">você</span>
                   )}
                 </div>
-                <p className="text-xs text-[#7B84E0] truncate">@{u.username}</p>
+                <p className="text-xs text-[#71717A] truncate">@{u.username}</p>
               </div>
 
               <Badge variant="outline" className={`${ROLE_STYLES[u.role] || ''} border`}>
@@ -149,15 +149,15 @@ export default function Users() {
 
               <div className="flex items-center gap-2">
                 <Switch checked={u.ativo} onCheckedChange={() => toggleActive(u)} disabled={u.id === currentUser?.id} />
-                <span className="text-xs text-[#7B84E0] w-14">{u.ativo ? 'Ativo' : 'Inativo'}</span>
+                <span className="text-xs text-[#71717A] w-14">{u.ativo ? 'Ativo' : 'Inativo'}</span>
               </div>
 
               <div className="flex items-center gap-1">
-                <button onClick={() => openEdit(u)} className="p-2 hover:bg-[#1E2070] rounded transition-colors" aria-label="Editar" title="Editar">
-                  <Pencil className="h-4 w-4 text-[#9BA0D0]" />
+                <button onClick={() => openEdit(u)} className="p-2 hover:bg-[#1A1A1A] rounded transition-colors" aria-label="Editar" title="Editar">
+                  <Pencil className="h-4 w-4 text-[#A1A1AA]" />
                 </button>
                 <button onClick={() => handleDelete(u)} disabled={u.id === currentUser?.id}
-                  className="p-2 hover:bg-[#1E2070] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-2 hover:bg-[#1A1A1A] rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   aria-label="Excluir" title="Excluir">
                   <Trash2 className="h-4 w-4 text-red-400" />
                 </button>
@@ -165,16 +165,16 @@ export default function Users() {
             </div>
           ))}
           {!loading && users.length === 0 && (
-            <div className="p-8 text-center text-sm text-[#7B84E0]">Nenhum usuário cadastrado.</div>
+            <div className="p-8 text-center text-sm text-[#71717A]">Nenhum usuário cadastrado.</div>
           )}
         </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-[#12134A] border-[#2D3090]/60 text-[#E8E9FF]">
+        <DialogContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5]">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar usuário' : 'Novo usuário'}</DialogTitle>
-            <DialogDescription className="text-[#7B84E0]">
+            <DialogDescription className="text-[#71717A]">
               {editing ? 'Atualize os dados e o nível de acesso.' : 'Preencha os dados para criar uma nova conta.'}
             </DialogDescription>
           </DialogHeader>
@@ -183,27 +183,27 @@ export default function Users() {
             <div className="space-y-2">
               <Label htmlFor="nome">Nome</Label>
               <Input id="nome" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
-                className="bg-[#0D0E2A] border-[#2D3090]/60" placeholder="Nome completo" />
+                className="bg-[#0A0A0A] border-[#27272A]" placeholder="Nome completo" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="username">Usuário (login)</Label>
               <Input id="username" value={form.username} disabled={!!editing}
                 onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-                className="bg-[#0D0E2A] border-[#2D3090]/60 disabled:opacity-50" placeholder="ex: joao.silva" />
+                className="bg-[#0A0A0A] border-[#27272A] disabled:opacity-50" placeholder="ex: joao.silva" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{editing ? 'Nova senha (deixe em branco p/ manter)' : 'Senha'}</Label>
               <Input id="password" type="password" value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                className="bg-[#0D0E2A] border-[#2D3090]/60" placeholder="••••••" />
+                className="bg-[#0A0A0A] border-[#27272A]" placeholder="••••••" />
             </div>
             <div className="space-y-2">
               <Label>Nível de acesso</Label>
               <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
-                <SelectTrigger className="bg-[#0D0E2A] border-[#2D3090]/60">
+                <SelectTrigger className="bg-[#0A0A0A] border-[#27272A]">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#12134A] border-[#2D3090]/60 text-[#E8E9FF]">
+                <SelectContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5]">
                   {roles.map(r => (
                     <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                   ))}
@@ -213,10 +213,10 @@ export default function Users() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} className="border-[#2D3090]/60 bg-transparent hover:bg-[#1E2070]">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="border-[#27272A] bg-transparent hover:bg-[#1A1A1A]">
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-[#2D3090] hover:bg-[#3A42B0] text-white">
+            <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-500 text-white">
               {saving ? 'Salvando...' : (editing ? 'Salvar' : 'Criar')}
             </Button>
           </DialogFooter>

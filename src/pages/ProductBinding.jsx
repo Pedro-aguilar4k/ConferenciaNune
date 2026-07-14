@@ -118,25 +118,25 @@ export default function ProductBinding() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/notas')} className="p-1.5 hover:bg-[#1E2070] rounded transition-colors">
+        <button onClick={() => navigate('/notas')} className="p-1.5 hover:bg-[#1A1A1A] rounded transition-colors">
           <ArrowLeft className="h-5 w-5 text-zinc-400" />
         </button>
         <div>
-          <h1 className="font-heading text-2xl sm:text-3xl font-semibold text-[#E8E9FF] tracking-tight">Vinculacao de Produtos</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl font-semibold text-[#F4F4F5] tracking-tight">Vinculacao de Produtos</h1>
           <p className="text-zinc-500 text-sm">NF-e {nota.numero || '-'} &middot; {nota.fornecedor_nome}</p>
         </div>
       </div>
 
-      <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md p-4">
+      <div className="bg-[#121212] border border-[#27272A] rounded-md p-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Produtos Vinculados</span>
-          <span className="font-mono text-lg text-[#E8E9FF] font-bold">{total_vinculados} / {total}</span>
+          <span className="font-mono text-lg text-[#F4F4F5] font-bold">{total_vinculados} / {total}</span>
         </div>
-        <Progress value={pct} className={`h-4 bg-[#1E2070] ${pct === 100 ? '[&>div]:bg-green-500' : '[&>div]:bg-blue-500'}`} />
+        <Progress value={pct} className={`h-4 bg-[#1A1A1A] ${pct === 100 ? '[&>div]:bg-green-500' : '[&>div]:bg-blue-500'}`} />
       </div>
 
       {current ? (
-        <div className="bg-[#12134A] border-2 border-yellow-500/40 rounded-lg p-8">
+        <div className="bg-[#121212] border-2 border-yellow-500/40 rounded-lg p-8">
           <div className="flex items-center justify-between mb-6">
             <Badge className="bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
               Produto {currentIndex} de {total} &middot; sem cadastro
@@ -146,7 +146,7 @@ export default function ProductBinding() {
 
           <div className="text-center space-y-4 mb-8">
             <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Codigo da Nota</p>
-            <p className="font-mono text-4xl sm:text-5xl font-bold text-[#E8E9FF]">{current.cprod || '-'}</p>
+            <p className="font-mono text-4xl sm:text-5xl font-bold text-[#F4F4F5]">{current.cprod || '-'}</p>
             <p className="text-xl sm:text-2xl text-zinc-300">{current.descricao_nfe}</p>
             <div className="flex items-center justify-center gap-6 text-zinc-500 font-mono text-sm">
               <span>Qtd: <span className="text-zinc-300">{Number(current.quantidade)} {current.unidade}</span></span>
@@ -161,7 +161,7 @@ export default function ProductBinding() {
               </span>
               {current.sugestoes.slice(0, 3).map((s, i) => (
                 <button key={i} onClick={() => handleCodeChange(s.produto.codigo)}
-                  className="px-3 py-1.5 bg-blue-500/10 border border-[#4B52C4]/30 text-[#7B84E0] rounded-full text-xs font-mono hover:bg-[#3A42B0]/20 transition-colors">
+                  className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-[#71717A] rounded-full text-xs font-mono hover:bg-blue-500/20 transition-colors">
                   {s.produto.codigo} &middot; {s.similaridade}%
                 </button>
               ))}
@@ -169,22 +169,22 @@ export default function ProductBinding() {
           )}
 
           <div className="max-w-xl mx-auto">
-            <label className="text-[11px] uppercase tracking-[0.2em] text-[#7B84E0] mb-2 block text-center">Digite o Codigo Interno</label>
+            <label className="text-[11px] uppercase tracking-[0.2em] text-[#71717A] mb-2 block text-center">Digite o Codigo Interno</label>
             <input ref={inputRef} value={codeInput}
               onChange={e => handleCodeChange(e.target.value)} onKeyDown={handleEnter}
               placeholder="Codigo interno + ENTER"
               autoComplete="off"
-              className="w-full text-3xl font-mono text-center p-4 bg-black text-white border-2 border-[#4B52C4]/30 rounded-md focus:border-blue-500 focus:ring-4 focus:ring-[#4B52C4]/20 focus:outline-none placeholder:text-zinc-700 placeholder:text-xl transition-all" />
+              className="w-full text-3xl font-mono text-center p-4 bg-black text-white border-2 border-blue-500/20 rounded-md focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none placeholder:text-zinc-700 placeholder:text-xl transition-all" />
 
             {saving && (
-              <div className="mt-3 p-3 bg-[#2D3090]/10 border border-[#4B52C4]/30 rounded-md">
-                <p className="text-[#7B84E0] text-sm">Processando codigo "{codeInput}"...</p>
+              <div className="mt-3 p-3 bg-blue-600/10 border border-blue-500/20 rounded-md">
+                <p className="text-[#71717A] text-sm">Processando codigo "{codeInput}"...</p>
               </div>
             )}
           </div>
         </div>
       ) : (
-        <div className="bg-[#12134A] border-2 border-green-500/50 rounded-lg p-12 text-center">
+        <div className="bg-[#121212] border-2 border-green-500/50 rounded-lg p-12 text-center">
           <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-400" />
           <h2 className="text-3xl font-bold text-green-400 mb-2">TODOS OS PRODUTOS VINCULADOS!</h2>
           <p className="text-zinc-400 mb-6">Todos os {total} itens da nota possuem codigo interno.</p>
@@ -200,16 +200,16 @@ export default function ProductBinding() {
       )}
 
       {vinculados.length > 0 && (
-        <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md p-4">
+        <div className="bg-[#121212] border border-[#27272A] rounded-md p-4">
           <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-3 flex items-center gap-2">
             <Link2 className="h-3.5 w-3.5" /> Ja vinculados ({vinculados.length})
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {vinculados.map(item => (
-              <div key={item.id} className="flex items-center gap-3 bg-[#0D0E2A] border border-[#2D3090]/60 rounded p-2.5">
+              <div key={item.id} className="flex items-center gap-3 bg-[#0A0A0A] border border-[#27272A] rounded p-2.5">
                 <Check className="h-4 w-4 text-green-400 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-[#E8E9FF] truncate">
+                  <p className="text-sm text-[#F4F4F5] truncate">
                     <span className="font-mono text-green-400 mr-2">{item.produto_interno_codigo}</span>
                     {item.descricao_nfe}
                   </p>

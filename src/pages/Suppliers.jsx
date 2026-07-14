@@ -58,9 +58,9 @@ export default function Suppliers() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#E8E9FF] tracking-tight">Fornecedores</h1>
+        <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Fornecedores</h1>
         <button onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-[#2D3090] text-white hover:bg-[#3A42B0] rounded-md text-sm transition-colors">
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-500 rounded-md text-sm transition-colors">
           <Plus className="h-4 w-4" /> Novo Fornecedor
         </button>
       </div>
@@ -69,10 +69,10 @@ export default function Suppliers() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
         <Input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por CNPJ ou nome..."
-          className="pl-10 bg-[#12134A] border-[#2D3090]/60 text-[#E8E9FF] placeholder:text-zinc-600 focus:border-blue-500" />
+          className="pl-10 bg-[#121212] border-[#27272A] text-[#F4F4F5] placeholder:text-zinc-600 focus:border-blue-500" />
       </div>
 
-      <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md overflow-hidden">
+      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden">
         {fornecedores.length === 0 ? (
           <div className="p-8 text-center text-zinc-600">
             <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -81,25 +81,25 @@ export default function Suppliers() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent border-[#2D3090]/60">
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">CNPJ</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Nome</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Contato</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Telefone</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Acoes</TableHead>
+              <TableRow className="hover:bg-transparent border-[#27272A]">
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">CNPJ</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Nome</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Contato</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Telefone</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {fornecedores.map(f => (
-                <TableRow key={f.id} className="border-[#1A1A1A] hover:bg-[#1E2070]/50">
-                  <TableCell className="font-mono text-sm text-[#E8E9FF]">{f.cnpj}</TableCell>
-                  <TableCell className="text-sm text-[#E8E9FF]">{f.nome}</TableCell>
+                <TableRow key={f.id} className="border-[#1A1A1A] hover:bg-[#1A1A1A]/50">
+                  <TableCell className="font-mono text-sm text-[#F4F4F5]">{f.cnpj}</TableCell>
+                  <TableCell className="text-sm text-[#F4F4F5]">{f.nome}</TableCell>
                   <TableCell className="text-sm text-zinc-400">{f.contato || '-'}</TableCell>
                   <TableCell className="text-sm text-zinc-400">{f.telefone || '-'}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <button onClick={() => openEdit(f)}
-                        className="p-1.5 hover:bg-[#2D3090]/30 rounded text-[#7B84E0] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                        className="p-1.5 hover:bg-blue-600/30 rounded text-[#71717A] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                       <button onClick={() => handleDelete(f.id)}
                         className="p-1.5 hover:bg-red-600/20 rounded text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
@@ -112,7 +112,7 @@ export default function Suppliers() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-[#12134A] border-[#2D3090]/60 text-[#E8E9FF]">
+        <DialogContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5]">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar Fornecedor' : 'Novo Fornecedor'}</DialogTitle>
             <DialogDescription className="text-zinc-500">Preencha os dados do fornecedor</DialogDescription>
@@ -122,36 +122,36 @@ export default function Suppliers() {
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">CNPJ *</label>
                 <Input value={form.cnpj} onChange={e => setForm({...form, cnpj: e.target.value})}
-                  className="bg-[#0D0E2A] border-[#2D3090]/60 text-[#E8E9FF]" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Nome *</label>
                 <Input value={form.nome} onChange={e => setForm({...form, nome: e.target.value})}
-                  className="bg-[#0D0E2A] border-[#2D3090]/60 text-[#E8E9FF]" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
             </div>
             <div>
               <label className="text-xs text-zinc-500 mb-1 block">Contato</label>
               <Input value={form.contato} onChange={e => setForm({...form, contato: e.target.value})}
-                className="bg-[#0D0E2A] border-[#2D3090]/60 text-[#E8E9FF]" />
+                className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Email</label>
                 <Input value={form.email} onChange={e => setForm({...form, email: e.target.value})}
-                  className="bg-[#0D0E2A] border-[#2D3090]/60 text-[#E8E9FF]" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
               <div>
                 <label className="text-xs text-zinc-500 mb-1 block">Telefone</label>
                 <Input value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})}
-                  className="bg-[#0D0E2A] border-[#2D3090]/60 text-[#E8E9FF]" />
+                  className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5]" />
               </div>
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-2">
-            <button onClick={() => setDialogOpen(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-[#E8E9FF] transition-colors">Cancelar</button>
+            <button onClick={() => setDialogOpen(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors">Cancelar</button>
             <button onClick={handleSave}
-              className="px-4 py-2 bg-[#2D3090] text-white rounded-md text-sm hover:bg-[#3A42B0] transition-colors">
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-500 transition-colors">
               {editing ? 'Salvar' : 'Criar'}
             </button>
           </div>

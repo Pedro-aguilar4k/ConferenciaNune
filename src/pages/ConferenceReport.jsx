@@ -85,7 +85,7 @@ export default function ConferenceReport() {
 
   return (
     <div className="min-h-screen bg-gray-200 print:bg-white">
-      <div className="print:hidden sticky top-0 z-10 bg-[#12134A] border-b border-[#2D3090]/60 px-6 py-3 flex items-center gap-3">
+      <div className="print:hidden sticky top-0 z-10 bg-[#121212] border-b border-[#27272A] px-6 py-3 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-2 text-zinc-300 hover:text-white text-sm">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </button>
@@ -102,7 +102,7 @@ export default function ConferenceReport() {
             <Save className="h-4 w-4" /> {saving ? 'Salvando...' : 'Salvar na Nota'}
           </button>
           <button onClick={handlePrint}
-            className="flex items-center gap-2 px-5 py-2 bg-[#2D3090] text-white rounded-md text-sm font-semibold hover:bg-[#3A42B0] transition-colors">
+            className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-500 transition-colors">
             <Printer className="h-4 w-4" /> Imprimir
           </button>
         </div>

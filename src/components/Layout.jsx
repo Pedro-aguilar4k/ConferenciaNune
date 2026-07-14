@@ -1,31 +1,37 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, ClipboardCheck, Package, Truck, Link2, Brain, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, ClipboardCheck, Package, Truck, Link2, Brain, Users, ChevronLeft, ChevronRight, Menu, X, LogOut } from 'lucide-react';
 import { TEST_IDS } from '@/constants/testIds';
+import { useAuth, PERM } from '@/contexts/AuthContext';
 
+// permission: null = visivel para qualquer usuario logado
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard', testId: TEST_IDS.navDashboard },
-  { path: '/notas', icon: FileText, label: 'Notas Fiscais', testId: TEST_IDS.navNotas },
-  { path: '/conferencia', icon: ClipboardCheck, label: 'Conferencia', testId: TEST_IDS.navConferencia },
-  { path: '/reconhecimento', icon: Brain, label: 'Reconhecimento', testId: TEST_IDS.navReconhecimento },
-  { path: '/produtos', icon: Package, label: 'Produtos', testId: TEST_IDS.navProdutos },
-  { path: '/fornecedores', icon: Truck, label: 'Fornecedores', testId: TEST_IDS.navFornecedores },
-  { path: '/equivalencias', icon: Link2, label: 'Equivalencias', testId: TEST_IDS.navEquivalencias },
+  { path: '/', icon: LayoutDashboard, label: 'Dashboard', testId: TEST_IDS.navDashboard, permission: null },
+  { path: '/notas', icon: FileText, label: 'Notas Fiscais', testId: TEST_IDS.navNotas, permission: null },
+  { path: '/conferencia', icon: ClipboardCheck, label: 'Conferencia', testId: TEST_IDS.navConferencia, permission: PERM.CONFERIR },
+  { path: '/reconhecimento', icon: Brain, label: 'Reconhecimento', testId: TEST_IDS.navReconhecimento, permission: PERM.CADASTROS },
+  { path: '/produtos', icon: Package, label: 'Produtos', testId: TEST_IDS.navProdutos, permission: null },
+  { path: '/fornecedores', icon: Truck, label: 'Fornecedores', testId: TEST_IDS.navFornecedores, permission: null },
+  { path: '/equivalencias', icon: Link2, label: 'Equivalencias', testId: TEST_IDS.navEquivalencias, permission: null },
+  { path: '/usuarios', icon: Users, label: 'Usuarios', testId: 'nav-usuarios', permission: PERM.USUARIOS },
 ];
 
 export default function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { user, logout, hasPermission } = useAuth();
 
   // Fecha o menu mobile ao navegar entre paginas
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
+  const visibleItems = navItems.filter(item => !item.permission || hasPermission(item.permission));
+
   const NavLinks = ({ showLabels }) => (
     <nav className="flex-1 p-2 space-y-1">
-      {navItems.map(item => {
+      {visibleItems.map(item => {
         const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
         return (
           <Link key={item.path} to={item.path} data-testid={item.testId}
@@ -42,6 +48,32 @@ export default function Layout({ children }) {
     </nav>
   );
 
+  const UserFooter = ({ showLabels }) => {
+    if (!user) return null;
+    return (
+      <div className="p-3 border-t border-[#27272A]">
+        {showLabels ? (
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-semibold text-blue-400">{(user.nome || user.username || '?').charAt(0).toUpperCase()}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-[#F4F4F5] truncate leading-tight">{user.nome || user.username}</p>
+              <p className="text-[10px] text-[#71717A] uppercase tracking-wider truncate">{user.role_label || user.role}</p>
+            </div>
+            <button onClick={logout} className="p-1.5 hover:bg-[#1A1A1A] rounded transition-colors flex-shrink-0" aria-label="Sair" title="Sair">
+              <LogOut className="h-4 w-4 text-[#A1A1AA]" />
+            </button>
+          </div>
+        ) : (
+          <button onClick={logout} className="w-full flex justify-center p-1.5 hover:bg-[#1A1A1A] rounded transition-colors" aria-label="Sair" title="Sair">
+            <LogOut className="h-4 w-4 text-[#A1A1AA]" />
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-screen bg-[#0A0A0A]">
       {/* Sidebar - desktop (md+) */}
@@ -53,9 +85,7 @@ export default function Layout({ children }) {
           </button>
         </div>
         <NavLinks showLabels={!collapsed} />
-        <div className="p-3 border-t border-[#27272A]">
-          {!collapsed && <p className="text-[10px] text-[#71717A] tracking-wider uppercase">NF-e Conference v2.0</p>}
-        </div>
+        <UserFooter showLabels={!collapsed} />
       </aside>
 
       {/* Sidebar - mobile (off-canvas drawer) */}
@@ -70,9 +100,7 @@ export default function Layout({ children }) {
               </button>
             </div>
             <NavLinks showLabels={true} />
-            <div className="p-3 border-t border-[#27272A]">
-              <p className="text-[10px] text-[#71717A] tracking-wider uppercase">NF-e Conference v2.0</p>
-            </div>
+            <UserFooter showLabels={true} />
           </aside>
         </div>
       )}

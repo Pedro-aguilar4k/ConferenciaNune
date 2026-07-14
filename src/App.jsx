@@ -3,9 +3,12 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import Layout from "@/components/Layout";
+import { AuthProvider, PERM } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Code splitting: cada pagina vira um chunk carregado sob demanda,
 // reduzindo o tamanho do bundle inicial e acelerando o primeiro load.
+const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const NfeImport = lazy(() => import("@/pages/NfeImport"));
 const Conference = lazy(() => import("@/pages/Conference"));
@@ -15,6 +18,7 @@ const Equivalences = lazy(() => import("@/pages/Equivalences"));
 const RecognitionCenter = lazy(() => import("@/pages/RecognitionCenter"));
 const ProductBinding = lazy(() => import("@/pages/ProductBinding"));
 const ConferenceReport = lazy(() => import("@/pages/ConferenceReport"));
+const Users = lazy(() => import("@/pages/Users"));
 
 function PageFallback() {
   return (
@@ -24,27 +28,39 @@ function PageFallback() {
   );
 }
 
+// Envolve uma pagina protegida no Layout, exigindo login (e permissao opcional).
+function Protected({ children, permission }) {
+  return (
+    <ProtectedRoute permission={permission}>
+      <Layout>{children}</Layout>
+    </ProtectedRoute>
+  );
+}
+
 function App() {
   return (
     <div className="App dark">
-      <BrowserRouter>
-        <Layout>
+      <AuthProvider>
+        <BrowserRouter>
           <Suspense fallback={<PageFallback />}>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/notas" element={<NfeImport />} />
-              <Route path="/conferencia" element={<Conference />} />
-              <Route path="/conferencia/:notaId" element={<Conference />} />
-              <Route path="/vinculacao/:notaId" element={<ProductBinding />} />
-              <Route path="/relatorio/:notaId" element={<ConferenceReport />} />
-              <Route path="/reconhecimento" element={<RecognitionCenter />} />
-              <Route path="/produtos" element={<Products />} />
-              <Route path="/fornecedores" element={<Suppliers />} />
-              <Route path="/equivalencias" element={<Equivalences />} />
+              <Route path="/login" element={<Login />} />
+
+              <Route path="/" element={<Protected><Dashboard /></Protected>} />
+              <Route path="/notas" element={<Protected><NfeImport /></Protected>} />
+              <Route path="/conferencia" element={<Protected permission={PERM.CONFERIR}><Conference /></Protected>} />
+              <Route path="/conferencia/:notaId" element={<Protected permission={PERM.CONFERIR}><Conference /></Protected>} />
+              <Route path="/vinculacao/:notaId" element={<Protected permission={PERM.CADASTROS}><ProductBinding /></Protected>} />
+              <Route path="/relatorio/:notaId" element={<Protected permission={PERM.RELATORIOS}><ConferenceReport /></Protected>} />
+              <Route path="/reconhecimento" element={<Protected permission={PERM.CADASTROS}><RecognitionCenter /></Protected>} />
+              <Route path="/produtos" element={<Protected><Products /></Protected>} />
+              <Route path="/fornecedores" element={<Protected><Suppliers /></Protected>} />
+              <Route path="/equivalencias" element={<Protected><Equivalences /></Protected>} />
+              <Route path="/usuarios" element={<Protected permission={PERM.USUARIOS}><Users /></Protected>} />
             </Routes>
           </Suspense>
-        </Layout>
-      </BrowserRouter>
+        </BrowserRouter>
+      </AuthProvider>
       <Toaster theme="dark" position="top-right" richColors />
     </div>
   );

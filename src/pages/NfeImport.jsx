@@ -8,6 +8,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { TEST_IDS } from '@/constants/testIds';
 import { API } from '@/lib/api';
 import SefazImport from '@/components/SefazImport';
+import { useAuth, PERM } from '@/contexts/AuthContext';
 
 const statusMap = {
   pendente: { label: 'Pendente', class: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
@@ -22,6 +23,8 @@ export default function NfeImport() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canManageNotas = hasPermission(PERM.NOTAS);
 
   useEffect(() => { fetchNotas(); }, []);
 
@@ -77,18 +80,22 @@ export default function NfeImport() {
     <div className="space-y-6">
       <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Notas Fiscais</h1>
 
-      <div className="bg-[#121212] border border-[#27272A] border-dashed rounded-md p-8 flex flex-col items-center justify-center gap-4 hover:border-blue-500/40 transition-colors cursor-pointer"
-        onClick={() => fileInputRef.current?.click()}>
-        <Upload className="h-8 w-8 text-blue-400" />
-        <div className="text-center">
-          <p className="text-[#F4F4F5] font-medium">Importar XML da NF-e</p>
-          <p className="text-xs text-zinc-500 mt-1">Clique ou arraste o arquivo XML</p>
-        </div>
-        <input ref={fileInputRef} data-testid={TEST_IDS.xmlUploadInput} type="file" accept=".xml" className="hidden" onChange={handleUpload} />
-        {uploading && <p className="text-blue-400 text-sm">Processando...</p>}
-      </div>
+      {canManageNotas && (
+        <>
+          <div className="bg-[#121212] border border-[#27272A] border-dashed rounded-md p-8 flex flex-col items-center justify-center gap-4 hover:border-blue-500/40 transition-colors cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-8 w-8 text-blue-400" />
+            <div className="text-center">
+              <p className="text-[#F4F4F5] font-medium">Importar XML da NF-e</p>
+              <p className="text-xs text-zinc-500 mt-1">Clique ou arraste o arquivo XML</p>
+            </div>
+            <input ref={fileInputRef} data-testid={TEST_IDS.xmlUploadInput} type="file" accept=".xml" className="hidden" onChange={handleUpload} />
+            {uploading && <p className="text-blue-400 text-sm">Processando...</p>}
+          </div>
 
-      <SefazImport onImported={fetchNotas} />
+          <SefazImport onImported={fetchNotas} />
+        </>
+      )}
 
       <div className="bg-[#121212] border border-[#27272A] rounded-md">
         <div className="p-4 border-b border-[#27272A] flex items-center gap-3">
@@ -164,10 +171,12 @@ export default function NfeImport() {
                             <FileBarChart2 className="h-4 w-4" />
                           </button>
                         )}
-                        <button data-testid={`delete-nota-${nota.id}`} onClick={() => handleDelete(nota.id)}
-                          className="p-1.5 hover:bg-red-600/20 rounded text-red-400 transition-colors" title="Excluir">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {canManageNotas && (
+                          <button data-testid={`delete-nota-${nota.id}`} onClick={() => handleDelete(nota.id)}
+                            className="p-1.5 hover:bg-red-600/20 rounded text-red-400 transition-colors" title="Excluir">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

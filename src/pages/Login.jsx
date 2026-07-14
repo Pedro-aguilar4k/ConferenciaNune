@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogIn, Loader2, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const from = location.state?.from?.pathname || '/';
+
+  // Se ja estiver logado (ou apos login), sai da tela de login.
+  useEffect(() => {
+    if (user) navigate(from, { replace: true });
+  }, [user, from, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,7 +26,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(username.trim(), password);
-      // O redirecionamento acontece automaticamente ao autenticar (App.jsx)
+      navigate(from, { replace: true });
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Nao foi possivel entrar. Verifique suas credenciais.';
       setError(msg);

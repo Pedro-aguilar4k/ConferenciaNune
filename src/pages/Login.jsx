@@ -1,9 +1,7 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, ArrowRight } from 'lucide-react';
-
-const NdLogo3D = lazy(() => import('@/components/NdLogo3D'));
 
 export default function Login() {
   const { login, user } = useAuth();
@@ -64,12 +62,14 @@ export default function Login() {
           <span className="text-white font-bold text-lg tracking-widest uppercase">NuneDiesel</span>
         </div>
 
-        {/* Center: 3D icon + headline */}
-        <div className="relative flex flex-col items-start gap-8">
-          <Suspense fallback={<div className="w-40 h-40" />}>
-            <NdLogo3D size={200} />
-          </Suspense>
-
+        {/* Center: headline */}
+        <div className="relative flex flex-col items-start gap-10">
+          <img
+            src="/logo-full.png"
+            alt="NuneDiesel"
+            className="h-28 w-auto object-contain"
+            style={{ filter: 'brightness(0) invert(1)' }}
+          />
           <div>
             <p className="text-white/50 text-xs tracking-[0.2em] uppercase mb-3 font-medium">
               Pecas Diesel &bull; Linha Pesada
@@ -98,16 +98,11 @@ export default function Login() {
       <div className="flex-1 flex flex-col justify-center items-center px-6 py-12">
 
         {/* Mobile logo */}
-        <div className="lg:hidden flex flex-col items-center mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <img src="/logo-icon.png" alt="ND" className="h-7 w-auto" />
-            <span className="font-black text-xl tracking-widest uppercase" style={{ color: '#1a1f6e' }}>
-              NuneDiesel
-            </span>
-          </div>
-          <Suspense fallback={<div className="w-24 h-24" />}>
-            <NdLogo3D size={100} />
-          </Suspense>
+        <div className="lg:hidden flex items-center gap-2 mb-10">
+          <img src="/logo-icon.png" alt="ND" className="h-7 w-auto" />
+          <span className="font-black text-xl tracking-widest uppercase" style={{ color: '#1a1f6e' }}>
+            NuneDiesel
+          </span>
         </div>
 
         <div className="w-full max-w-[380px]">

@@ -5,14 +5,14 @@ import { useAuth, PERM } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Visão geral', permission: null },
-  { path: '/notas', icon: FileText, label: 'Notas fiscais', permission: null },
-  { path: '/conferencia', icon: ClipboardCheck, label: 'Conferência', permission: PERM.CONFERIR },
-  { path: '/reconhecimento', icon: Brain, label: 'Reconhecimento', permission: PERM.CADASTROS },
-  { path: '/produtos', icon: Package, label: 'Produtos', permission: null },
-  { path: '/fornecedores', icon: Truck, label: 'Fornecedores', permission: null },
-  { path: '/equivalencias', icon: Link2, label: 'Equivalências', permission: null },
-  { path: '/usuarios', icon: Users, label: 'Usuários', permission: PERM.USUARIOS },
+  { path: '/', icon: LayoutDashboard, label: 'Visão geral', permission: null, category: 'overview' },
+  { path: '/notas', icon: FileText, label: 'Notas fiscais', permission: null, category: 'operation' },
+  { path: '/conferencia', icon: ClipboardCheck, label: 'Conferência', permission: PERM.CONFERIR, category: 'operation' },
+  { path: '/reconhecimento', icon: Brain, label: 'Reconhecimento', permission: PERM.CADASTROS, category: 'intelligence' },
+  { path: '/produtos', icon: Package, label: 'Produtos', permission: null, category: 'registry' },
+  { path: '/fornecedores', icon: Truck, label: 'Fornecedores', permission: null, category: 'registry' },
+  { path: '/equivalencias', icon: Link2, label: 'Equivalências', permission: null, category: 'registry' },
+  { path: '/usuarios', icon: Users, label: 'Usuários', permission: PERM.USUARIOS, category: 'admin' },
 ];
 
 const routeTitles = [
@@ -52,7 +52,7 @@ export default function Layout({ children }) {
       <div className="flex flex-col gap-1">
         {visibleItems.map(item => {
           const active = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
-          return <Link key={item.path} to={item.path} title={!labels ? item.label : undefined} aria-current={active ? 'page' : undefined} className={`app-nav-link ${active ? 'is-active' : ''} ${labels ? '' : 'justify-center'}`}><item.icon className="h-[18px] w-[18px] shrink-0" />{labels && <span>{item.label}</span>}</Link>;
+          return <Link key={item.path} to={item.path} title={!labels ? item.label : undefined} aria-current={active ? 'page' : undefined} data-category={item.category} className={`app-nav-link ${active ? 'is-active' : ''} ${labels ? '' : 'justify-center'}`}><item.icon className="app-nav-icon h-[18px] w-[18px] shrink-0" />{labels && <span>{item.label}</span>}</Link>;
         })}
       </div>
     </nav>

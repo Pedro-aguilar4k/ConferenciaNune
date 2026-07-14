@@ -273,10 +273,15 @@ code, .font-mono {
     .app-sidebar { border-right: 1px solid var(--app-line); background: #fff; }
     .app-sidebar-brand { display: flex; min-height: 72px; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--app-line); }
     .app-topbar { display: flex; min-height: 72px; align-items: center; gap: 14px; padding: 0 24px; border-bottom: 1px solid var(--app-line); background: #fff; }
-    .app-nav-link { position: relative; display: flex; min-height: 42px; align-items: center; gap: 12px; padding: 0 12px; border-radius: 3px; color: #626a7b; font-size: 13px; font-weight: 500; transition: color .16s ease, background .16s ease; }
-    .app-nav-link:hover { color: var(--app-navy); background: #f1f2f6; }
-    .app-nav-link.is-active { color: #fff; background: var(--app-navy); box-shadow: 0 5px 16px #161a6218; }
-    .app-nav-link.is-active::before { position: absolute; left: 0; width: 3px; height: 20px; content: ''; background: var(--app-orange); }
+    .app-nav-link { --category-color: #4f5f8f; position: relative; display: flex; min-height: 42px; align-items: center; gap: 12px; padding: 0 12px; border-radius: 3px; color: #626a7b; font-size: 13px; font-weight: 500; transition: color .16s ease, background .16s ease; }
+    .app-nav-link[data-category='operation'] { --category-color: #d56a32; }
+    .app-nav-link[data-category='intelligence'] { --category-color: #3f7a61; }
+    .app-nav-link[data-category='registry'] { --category-color: #356c9b; }
+    .app-nav-link[data-category='admin'] { --category-color: #a84f4f; }
+    .app-nav-icon { color: var(--category-color); }
+    .app-nav-link:hover { color: #202538; background: #f1f2f6; }
+    .app-nav-link.is-active { color: #202538; background: #eef0ed; box-shadow: none; font-weight: 650; }
+    .app-nav-link.is-active::before { position: absolute; left: 0; width: 3px; height: 20px; content: ''; background: var(--category-color); }
     .app-icon-button { display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; color: #737b8d; transition: .16s ease; }
     .app-icon-button:hover { border-color: var(--app-line); color: var(--app-navy); background: #f5f6f8; }
     .app-icon-button:focus-visible { outline: 2px solid var(--app-navy); outline-offset: 2px; }
@@ -366,9 +371,14 @@ code, .font-mono {
     .dark .app-shell { --app-navy: #eef0ed; --app-ink: #f1f1f1; --app-orange: #f28a50; --app-line: #292929; background: #090909 !important; color: #f1f1f1 !important; }
     .dark .app-sidebar, .dark .app-topbar { background: #0d0d0d; }
     .dark .app-nav-link { color: #a6a6a6; }
+    .dark .app-nav-link[data-category='overview'] { --category-color: #b9c5e6; }
+    .dark .app-nav-link[data-category='operation'] { --category-color: #f2a274; }
+    .dark .app-nav-link[data-category='intelligence'] { --category-color: #82c5a2; }
+    .dark .app-nav-link[data-category='registry'] { --category-color: #83b7df; }
+    .dark .app-nav-link[data-category='admin'] { --category-color: #e58b8b; }
     .dark .app-nav-link:hover { color: #f1f1f1; background: #191919; }
-    .dark .app-nav-link.is-active { color: #090909; background: #eef0ed; box-shadow: none; }
-    .dark .app-nav-link.is-active::before { background: #f28a50; }
+    .dark .app-nav-link.is-active { color: #f1f1f1; background: #1b1b1b; box-shadow: inset 0 0 0 1px #292929; }
+    .dark .app-nav-link.is-active .app-nav-icon { color: var(--category-color); }
     .dark .app-icon-button { color: #a6a6a6; }
     .dark .app-icon-button:hover { border-color: #303030; color: #fff; background: #1b1b1b; }
     .dark .app-user-card { background: #151515; }

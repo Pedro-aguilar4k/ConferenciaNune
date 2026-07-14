@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+
+const NdLogo3D = lazy(() => import('@/components/NdLogo3D'));
 
 export default function Login() {
   const { login, user } = useAuth();
@@ -38,14 +40,16 @@ export default function Login() {
 
       <div className="w-full max-w-[360px]">
 
-        <div className="flex flex-col items-center mb-10">
-          <img
-            src="/logo-full.png"
-            alt="NuneDiesel Auto Pecas"
-            className="h-24 object-contain"
-            style={{ filter: 'brightness(0) invert(1)' }}
-          />
-          <p className="text-xs text-zinc-500 mt-4 tracking-[0.12em] uppercase">Sistema de Conferencia de NF-e</p>
+        <div className="flex flex-col items-center mb-8">
+          <Suspense fallback={
+            <div className="w-[160px] h-[160px] flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-zinc-600" />
+            </div>
+          }>
+            <NdLogo3D size={160} />
+          </Suspense>
+          <p className="text-sm font-bold tracking-[0.25em] uppercase text-zinc-200 mt-1">NuneDiesel</p>
+          <p className="text-[10px] text-zinc-600 mt-1 tracking-[0.12em] uppercase">Sistema de Conferencia de NF-e</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-[#111111] border border-zinc-800 rounded-lg p-6 space-y-4">

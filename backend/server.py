@@ -8,8 +8,9 @@ _backend_dir = Path(__file__).parent
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
 
-from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Query, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -24,6 +25,7 @@ from bson import ObjectId
 from services.matching import match_product as _match_product
 from services.xml_parser import parse_nfe_xml
 from services import sefaz
+from services import auth as auth_svc
 
 ROOT_DIR = Path(__file__).parent
 PROJECT_ROOT = ROOT_DIR.parent
@@ -63,6 +65,163 @@ api_router = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# ── Autenticacao (dependencias) ────────────────────────────────────
+_bearer = HTTPBearer(auto_error=False)
+
+
+async def get_current_user(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
+    """Valida o token JWT e retorna o usuario atual do banco."""
+    if creds is None:
+        raise HTTPException(401, "Nao autenticado")
+    try:
+        payload = auth_svc.decode_token(creds.credentials)
+    except Exception:
+        raise HTTPException(401, "Token invalido ou expirado")
+
+    user = await db.usuarios.find_one({'_id': ObjectId(payload['sub'])})
+    if not user:
+        raise HTTPException(401, "Usuario nao encontrado")
+    if not user.get('ativo', True):
+        raise HTTPException(403, "Usuario desativado")
+    return user
+
+
+def require_permission(permission: str):
+    """Cria uma dependencia que exige uma permissao especifica."""
+    async def _dep(user: dict = Depends(get_current_user)) -> dict:
+        if not auth_svc.role_has_permission(user.get('role', ''), permission):
+            raise HTTPException(403, "Voce nao tem permissao para esta acao")
+        return user
+    return _dep
+
+
+def _user_public(user: dict) -> dict:
+    """Serializa um usuario sem expor o hash da senha."""
+    role = user.get('role', '')
+    return {
+        'id': str(user['_id']),
+        'username': user.get('username'),
+        'nome': user.get('nome'),
+        'role': role,
+        'role_label': auth_svc.ROLE_LABELS.get(role, role),
+        'ativo': user.get('ativo', True),
+        'permissoes': auth_svc.permissions_for_role(role),
+        'created_at': user.get('created_at'),
+    }
+
+
+# ── Modelos de autenticacao ────────────────────────────────────────
+class LoginInput(BaseModel):
+    username: str
+    password: str
+
+
+class UserCreateInput(BaseModel):
+    username: str
+    password: str
+    nome: str
+    role: str
+
+
+class UserUpdateInput(BaseModel):
+    nome: Optional[str] = None
+    role: Optional[str] = None
+    ativo: Optional[bool] = None
+    password: Optional[str] = None
+
+
+# ── API: Autenticacao ──────────────────────────────────────────────
+@api_router.post("/auth/login")
+async def login(data: LoginInput):
+    user = await db.usuarios.find_one({'username': data.username.lower().strip()})
+    if not user or not auth_svc.verify_password(data.password, user.get('password_hash', '')):
+        raise HTTPException(401, "Usuario ou senha invalidos")
+    if not user.get('ativo', True):
+        raise HTTPException(403, "Usuario desativado. Contate o administrador.")
+    token = auth_svc.create_token(str(user['_id']), user['username'], user.get('role', ''))
+    return {'token': token, 'user': _user_public(user)}
+
+
+@api_router.get("/auth/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    return _user_public(user)
+
+
+# ── API: Gestao de usuarios (somente admin) ────────────────────────
+@api_router.get("/usuarios")
+async def list_usuarios(_: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
+    users = await db.usuarios.find().sort('created_at', -1).to_list(500)
+    return [_user_public(u) for u in users]
+
+
+@api_router.post("/usuarios")
+async def create_usuario(data: UserCreateInput, _: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
+    if data.role not in auth_svc.ROLES:
+        raise HTTPException(400, f"Papel invalido. Use um de: {', '.join(auth_svc.ROLES)}")
+    username = data.username.lower().strip()
+    if len(username) < 3:
+        raise HTTPException(400, "Usuario deve ter ao menos 3 caracteres")
+    if len(data.password) < 4:
+        raise HTTPException(400, "Senha deve ter ao menos 4 caracteres")
+    if await db.usuarios.find_one({'username': username}):
+        raise HTTPException(400, "Ja existe um usuario com esse nome")
+    doc = {
+        'username': username,
+        'nome': data.nome.strip() or username,
+        'role': data.role,
+        'password_hash': auth_svc.hash_password(data.password),
+        'ativo': True,
+        'created_at': datetime.now(timezone.utc).isoformat(),
+    }
+    result = await db.usuarios.insert_one(doc)
+    doc['_id'] = result.inserted_id
+    return _user_public(doc)
+
+
+@api_router.put("/usuarios/{user_id}")
+async def update_usuario(user_id: str, data: UserUpdateInput, admin: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
+    user = await db.usuarios.find_one({'_id': ObjectId(user_id)})
+    if not user:
+        raise HTTPException(404, "Usuario nao encontrado")
+
+    updates = {}
+    if data.nome is not None:
+        updates['nome'] = data.nome.strip()
+    if data.role is not None:
+        if data.role not in auth_svc.ROLES:
+            raise HTTPException(400, "Papel invalido")
+        updates['role'] = data.role
+    if data.ativo is not None:
+        # Nao permite o admin desativar a si mesmo
+        if str(user['_id']) == str(admin['_id']) and not data.ativo:
+            raise HTTPException(400, "Voce nao pode desativar a si mesmo")
+        updates['ativo'] = data.ativo
+    if data.password:
+        if len(data.password) < 4:
+            raise HTTPException(400, "Senha deve ter ao menos 4 caracteres")
+        updates['password_hash'] = auth_svc.hash_password(data.password)
+
+    if updates:
+        await db.usuarios.update_one({'_id': ObjectId(user_id)}, {'$set': updates})
+    updated = await db.usuarios.find_one({'_id': ObjectId(user_id)})
+    return _user_public(updated)
+
+
+@api_router.delete("/usuarios/{user_id}")
+async def delete_usuario(user_id: str, admin: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
+    if str(user_id) == str(admin['_id']):
+        raise HTTPException(400, "Voce nao pode excluir a si mesmo")
+    result = await db.usuarios.delete_one({'_id': ObjectId(user_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Usuario nao encontrado")
+    return {'ok': True}
+
+
+@api_router.get("/roles")
+async def list_roles(_: dict = Depends(get_current_user)):
+    """Lista os papeis disponiveis (para preencher formularios)."""
+    return [{'value': r, 'label': auth_svc.ROLE_LABELS[r]} for r in auth_svc.ROLES]
 
 # ── PyObjectId & BaseDocument ──────────────────────────────────────
 PyObjectId = Annotated[str, BeforeValidator(str)]
@@ -272,7 +431,7 @@ async def root():
 
 # ── API: Produtos ──────────────────────────────────────────────────
 @api_router.get("/produtos")
-async def list_produtos(search: Optional[str] = None):
+async def list_produtos(search: Optional[str] = None, _: dict = Depends(get_current_user)):
     query = {'ativo': True}
     if search:
         query['$or'] = [
@@ -284,7 +443,7 @@ async def list_produtos(search: Optional[str] = None):
     return [Produto.from_mongo(d).model_dump() for d in docs]
 
 @api_router.get("/produtos/exportar-excel")
-async def exportar_produtos_excel():
+async def exportar_produtos_excel(_: dict = Depends(get_current_user)):
     """Export all active products to an Excel spreadsheet (cod interno, descricao, EAN)."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
@@ -331,7 +490,7 @@ async def exportar_produtos_excel():
     )
 
 @api_router.post("/produtos")
-async def create_produto(data: ProdutoCreate):
+async def create_produto(data: ProdutoCreate, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     existing = await db.produtos.find_one({'codigo': data.codigo})
     if existing:
         raise HTTPException(400, f"Produto com codigo {data.codigo} ja existe")
@@ -341,7 +500,7 @@ async def create_produto(data: ProdutoCreate):
     return produto.model_dump()
 
 @api_router.put("/produtos/{produto_id}")
-async def update_produto(produto_id: str, data: ProdutoCreate):
+async def update_produto(produto_id: str, data: ProdutoCreate, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     result = await db.produtos.update_one({'_id': ObjectId(produto_id)}, {'$set': data.model_dump()})
     if result.matched_count == 0:
         raise HTTPException(404, "Produto nao encontrado")
@@ -349,13 +508,13 @@ async def update_produto(produto_id: str, data: ProdutoCreate):
     return Produto.from_mongo(doc).model_dump()
 
 @api_router.delete("/produtos/{produto_id}")
-async def delete_produto(produto_id: str):
+async def delete_produto(produto_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     await db.produtos.update_one({'_id': ObjectId(produto_id)}, {'$set': {'ativo': False}})
     return {"ok": True}
 
 # ── API: Fornecedores ──────────────────────────────────────────────
 @api_router.get("/fornecedores")
-async def list_fornecedores(search: Optional[str] = None):
+async def list_fornecedores(search: Optional[str] = None, _: dict = Depends(get_current_user)):
     query = {'ativo': True}
     if search:
         query['$or'] = [
@@ -366,14 +525,14 @@ async def list_fornecedores(search: Optional[str] = None):
     return [Fornecedor.from_mongo(d).model_dump() for d in docs]
 
 @api_router.post("/fornecedores")
-async def create_fornecedor(data: FornecedorCreate):
+async def create_fornecedor(data: FornecedorCreate, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     fornecedor = Fornecedor(**data.model_dump())
     result = await db.fornecedores.insert_one(fornecedor.to_mongo())
     fornecedor.id = str(result.inserted_id)
     return fornecedor.model_dump()
 
 @api_router.put("/fornecedores/{fornecedor_id}")
-async def update_fornecedor(fornecedor_id: str, data: FornecedorCreate):
+async def update_fornecedor(fornecedor_id: str, data: FornecedorCreate, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     result = await db.fornecedores.update_one({'_id': ObjectId(fornecedor_id)}, {'$set': data.model_dump()})
     if result.matched_count == 0:
         raise HTTPException(404, "Fornecedor nao encontrado")
@@ -381,13 +540,13 @@ async def update_fornecedor(fornecedor_id: str, data: FornecedorCreate):
     return Fornecedor.from_mongo(doc).model_dump()
 
 @api_router.delete("/fornecedores/{fornecedor_id}")
-async def delete_fornecedor(fornecedor_id: str):
+async def delete_fornecedor(fornecedor_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     await db.fornecedores.update_one({'_id': ObjectId(fornecedor_id)}, {'$set': {'ativo': False}})
     return {"ok": True}
 
 # ── API: Notas ─────────────────────────────────────────────────────
 @api_router.get("/notas")
-async def list_notas(status: Optional[str] = None):
+async def list_notas(status: Optional[str] = None, _: dict = Depends(get_current_user)):
     query = {}
     if status:
         query['status'] = status
@@ -395,7 +554,7 @@ async def list_notas(status: Optional[str] = None):
     return [Nota.from_mongo(d).model_dump() for d in docs]
 
 @api_router.get("/notas/{nota_id}")
-async def get_nota(nota_id: str):
+async def get_nota(nota_id: str, _: dict = Depends(get_current_user)):
     doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not doc:
         raise HTTPException(404, "Nota nao encontrada")
@@ -403,7 +562,6 @@ async def get_nota(nota_id: str):
     items = await db.itens_nota.find({'nota_id': nota_id}).sort('numero_item', 1).to_list(1000)
     return {'nota': nota.model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items]}
 
-@api_router.post("/notas/importar-xml")
 async def _importar_nfe_from_content(content, *, ignorar_duplicada=False):
     """Faz o parse de um XML de NF-e e importa a nota + itens no banco.
 
@@ -465,7 +623,8 @@ async def _importar_nfe_from_content(content, *, ignorar_duplicada=False):
     return {'nota': Nota.from_mongo(nota_doc).model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items_docs]}
 
 
-async def importar_xml(file: UploadFile = File(...)):
+@api_router.post("/notas/importar-xml")
+async def importar_xml(file: UploadFile = File(...), _: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
     content = await file.read()
     try:
         return await _importar_nfe_from_content(content)
@@ -476,7 +635,7 @@ async def importar_xml(file: UploadFile = File(...)):
         raise HTTPException(400, f"Erro ao processar XML: {str(e)}")
 
 @api_router.delete("/notas/{nota_id}")
-async def delete_nota(nota_id: str):
+async def delete_nota(nota_id: str, _: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
     await db.notas.delete_one({'_id': ObjectId(nota_id)})
     await db.itens_nota.delete_many({'nota_id': nota_id})
     await db.historico_leituras.delete_many({'nota_id': nota_id})
@@ -500,7 +659,7 @@ async def _get_cert_config():
 
 
 @api_router.get("/sefaz/certificado")
-async def get_certificado_status():
+async def get_certificado_status(_: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
     """Retorna se ha um certificado configurado (sem expor o arquivo/senha)."""
     cfg = await _get_cert_config()
     if not cfg:
@@ -520,6 +679,7 @@ async def upload_certificado(
     file: UploadFile = File(...),
     senha: str = Query(...),
     ambiente: str = Query("homologacao"),
+    _: dict = Depends(require_permission(auth_svc.PERM_NOTAS)),
 ):
     """Recebe o A1 (.pfx/.p12) + senha, valida e guarda a configuracao."""
     pfx_bytes = await file.read()
@@ -553,13 +713,13 @@ async def upload_certificado(
 
 
 @api_router.delete("/sefaz/certificado")
-async def delete_certificado():
+async def delete_certificado(_: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
     await db.config.delete_one({"_id": CERT_CONFIG_ID})
     return {"ok": True}
 
 
 @api_router.post("/sefaz/buscar")
-async def buscar_notas_sefaz(data: SefazBuscaInput):
+async def buscar_notas_sefaz(data: SefazBuscaInput, _: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
     """Consulta a Distribuicao DF-e e importa automaticamente as NF-e novas."""
     cfg = await _get_cert_config()
     if not cfg:
@@ -640,7 +800,7 @@ async def buscar_notas_sefaz(data: SefazBuscaInput):
 
 # ── API: Conferencia ───────────────────────────────────────────────
 @api_router.post("/conferencias/iniciar/{nota_id}")
-async def iniciar_conferencia(nota_id: str):
+async def iniciar_conferencia(nota_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
     doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not doc:
         raise HTTPException(404, "Nota nao encontrada")
@@ -661,7 +821,7 @@ async def iniciar_conferencia(nota_id: str):
 
 # ── API: Quick Product Lookup ──────────────────────────────────────
 @api_router.get("/produtos/buscar-codigo/{codigo}")
-async def buscar_produto_por_codigo(codigo: str):
+async def buscar_produto_por_codigo(codigo: str, _: dict = Depends(get_current_user)):
     """Quick lookup by internal code - for ENTER shortcut in binding screen."""
     prod = await db.produtos.find_one({'codigo': codigo, 'ativo': True})
     if not prod:
@@ -670,7 +830,7 @@ async def buscar_produto_por_codigo(codigo: str):
 
 # ── API: Vinculacao (per-nota binding) ─────────────────────────────
 @api_router.get("/vinculacao/{nota_id}")
-async def get_vinculacao(nota_id: str):
+async def get_vinculacao(nota_id: str, _: dict = Depends(get_current_user)):
     """Get nota info and items needing binding."""
     nota_doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not nota_doc:
@@ -711,7 +871,7 @@ async def _nota_progress(nota_id: str):
     return {'itens_completos': completos, 'total_itens': len(all_items)}
 
 @api_router.post("/conferencias/leitura")
-async def processar_leitura(data: LeituraInput):
+async def processar_leitura(data: LeituraInput, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
     """Game-mode scan: each beep = 1 unit. Free order (scan opens the item).
     If an item is active, only its EAN counts; other codes return 'produto_errado'."""
     nota = await db.notas.find_one({'_id': ObjectId(data.nota_id)})
@@ -808,7 +968,7 @@ class ConfirmarVinculoInput(BaseModel):
     origem_vinculo: str = "manual"
 
 @api_router.post("/conferencias/confirmar-vinculo")
-async def confirmar_vinculo(data: ConfirmarVinculoInput):
+async def confirmar_vinculo(data: ConfirmarVinculoInput, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
     item_doc = await db.itens_nota.find_one({'_id': ObjectId(data.item_nota_id)})
     if not item_doc:
         raise HTTPException(404, "Item nao encontrado")
@@ -863,7 +1023,7 @@ class ConfirmarLoteInput(BaseModel):
     vinculos: List[ConfirmarVinculoInput]
 
 @api_router.post("/conferencias/justificativa")
-async def salvar_justificativa(data: JustificativaInput):
+async def salvar_justificativa(data: JustificativaInput, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
     result = await db.itens_nota.update_one(
         {'_id': ObjectId(data.item_nota_id)},
         {'$set': {'justificativa_divergencia': data.justificativa}}
@@ -873,7 +1033,7 @@ async def salvar_justificativa(data: JustificativaInput):
     return {"ok": True}
 
 @api_router.post("/conferencias/confirmar-lote")
-async def confirmar_vinculo_lote(data: ConfirmarLoteInput):
+async def confirmar_vinculo_lote(data: ConfirmarLoteInput, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
     """Bulk confirm multiple bindings at once."""
     confirmados = 0
     erros = []
@@ -886,7 +1046,7 @@ async def confirmar_vinculo_lote(data: ConfirmarLoteInput):
     return {'confirmados': confirmados, 'erros': erros, 'total': len(data.vinculos)}
 
 @api_router.post("/conferencias/finalizar/{nota_id}")
-async def finalizar_conferencia(nota_id: str, data: Optional[FinalizarInput] = None):
+async def finalizar_conferencia(nota_id: str, data: Optional[FinalizarInput] = None, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
     items = await db.itens_nota.find({'nota_id': nota_id}).to_list(1000)
     has_divergence = any(i.get('quantidade_conferida', 0) > i.get('quantidade', 0) for i in items)
     has_pending = any(i.get('quantidade_conferida', 0) < i.get('quantidade', 0) for i in items)
@@ -902,7 +1062,7 @@ async def finalizar_conferencia(nota_id: str, data: Optional[FinalizarInput] = N
     return Nota.from_mongo(nota_doc).model_dump()
 
 @api_router.get("/conferencias/relatorio/{nota_id}")
-async def relatorio_conferencia(nota_id: str):
+async def relatorio_conferencia(nota_id: str, _: dict = Depends(get_current_user)):
     """Detailed conference report data for A4 printing."""
     nota_doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not nota_doc:
@@ -968,7 +1128,7 @@ async def relatorio_conferencia(nota_id: str):
     }
 
 @api_router.post("/conferencias/relatorio/{nota_id}/salvar")
-async def salvar_relatorio(nota_id: str):
+async def salvar_relatorio(nota_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
     """Salva o snapshot do relatorio de conferencia dentro do documento da nota."""
     nota_doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not nota_doc:
@@ -1028,7 +1188,7 @@ async def salvar_relatorio(nota_id: str):
 
 # ── API: Recognition Center ────────────────────────────────────────
 @api_router.get("/reconhecimento")
-async def list_reconhecimento(fornecedor_cnpj: Optional[str] = None):
+async def list_reconhecimento(fornecedor_cnpj: Optional[str] = None, _: dict = Depends(get_current_user)):
     """List all items without binding (pending recognition)."""
     query = {'produto_interno_id': None, 'ignorado': {'$ne': True}}
     if fornecedor_cnpj:
@@ -1059,12 +1219,12 @@ async def list_reconhecimento(fornecedor_cnpj: Optional[str] = None):
     return result
 
 @api_router.post("/reconhecimento/confirmar")
-async def confirmar_reconhecimento(data: ConfirmarVinculoInput):
+async def confirmar_reconhecimento(data: ConfirmarVinculoInput, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     """Confirm binding from Recognition Center - same as conference confirmar-vinculo."""
     return await confirmar_vinculo(data)
 
 @api_router.post("/reconhecimento/ignorar/{item_id}")
-async def ignorar_reconhecimento(item_id: str):
+async def ignorar_reconhecimento(item_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     """Mark item as ignored in recognition center."""
     result = await db.itens_nota.update_one(
         {'_id': ObjectId(item_id)},
@@ -1076,7 +1236,7 @@ async def ignorar_reconhecimento(item_id: str):
 
 # ����� API: Equivalencias ─────────────────────────────────────────────
 @api_router.get("/equivalencias")
-async def list_equivalencias(fornecedor_cnpj: Optional[str] = None):
+async def list_equivalencias(fornecedor_cnpj: Optional[str] = None, _: dict = Depends(get_current_user)):
     query = {}
     if fornecedor_cnpj:
         query['fornecedor_cnpj'] = fornecedor_cnpj
@@ -1084,19 +1244,19 @@ async def list_equivalencias(fornecedor_cnpj: Optional[str] = None):
     return [EquivalenciaProduto.from_mongo(d).model_dump() for d in docs]
 
 @api_router.delete("/equivalencias/{eq_id}")
-async def delete_equivalencia(eq_id: str):
+async def delete_equivalencia(eq_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
     await db.equivalencia_produtos.delete_one({'_id': ObjectId(eq_id)})
     return {"ok": True}
 
 # ── API: Historico de Aprendizado ──────────────────────────────────
 @api_router.get("/historico-aprendizado")
-async def list_historico_aprendizado(limit: int = 50):
+async def list_historico_aprendizado(limit: int = 50, _: dict = Depends(get_current_user)):
     docs = await db.historico_aprendizado.find().sort('created_at', -1).to_list(limit)
     return [HistoricoAprendizado.from_mongo(d).model_dump() for d in docs]
 
 # ── API: Dashboard Inteligente ─────────────────────────────────────
 @api_router.get("/dashboard")
-async def dashboard():
+async def dashboard(_: dict = Depends(get_current_user)):
     today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc).isoformat()
     total_notas = await db.notas.count_documents({})
     conferidas_hoje = await db.notas.count_documents({'status': 'conferida', 'conferencia_fim': {'$gte': today_start}})
@@ -1197,7 +1357,7 @@ async def dashboard():
 
 # ── API: Seed Data ─────────────────────────────────────────────────
 @api_router.post("/seed")
-async def seed_data():
+async def seed_data(_: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
     await db.produtos.delete_many({})
     await db.fornecedores.delete_many({})
     await db.equivalencia_produtos.delete_many({})
@@ -1345,7 +1505,19 @@ async def startup():
             db.historico_leituras.create_index("nota_id"),
             db.historico_aprendizado.create_index("fornecedor_cnpj"),
             db.historico_aprendizado.create_index("created_at"),
+            db.usuarios.create_index("username", unique=True),
         )
+        # Seed do admin inicial (admin/admin) caso nao exista nenhum usuario
+        if await db.usuarios.count_documents({}) == 0:
+            await db.usuarios.insert_one({
+                'username': 'admin',
+                'nome': 'Administrador',
+                'role': auth_svc.ROLE_ADMIN,
+                'password_hash': auth_svc.hash_password('admin'),
+                'ativo': True,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+            })
+            logger.info("Usuario admin inicial criado (admin/admin) - altere a senha apos o primeiro acesso")
         logger.info("NF-e Conference System v2.0 started - Intelligent Matching Engine")
     except Exception as e:
         logger.error(f"Falha ao conectar/criar indices no MongoDB durante o startup: {e}")

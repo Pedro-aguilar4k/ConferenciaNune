@@ -1,26 +1,20 @@
-import { useEffect, useState, useMemo } from 'react';
-import axios from 'axios';
+import { useMemo } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { FileCheck, Clock, AlertTriangle, Link2, Target, Zap, Brain } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { API } from '@/lib/api';
+import { fetchJson, queryKeys } from '@/lib/queries';
+import DashboardSkeleton from '@/components/DashboardSkeleton';
 
 export default function Dashboard() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { fetchDashboard(); }, []);
-
-  const fetchDashboard = async () => {
-    try {
-      const res = await axios.get(`${API}/dashboard`);
-      setData(res.data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isPending, isError, isFetching } = useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: () => fetchJson('/dashboard'),
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+  });
 
   const stats = useMemo(() => {
     if (!data) return [];
@@ -49,14 +43,18 @@ export default function Dashboard() {
     [methodData]
   );
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-[#71717A]">Carregando dashboard...</div>;
-  if (!data) return <div className="text-[#71717A]">Erro ao carregar dashboard</div>;
+  if (isPending && !data) return <DashboardSkeleton />;
+  if (isError && !data) return <div className="text-[#71717A]">Erro ao carregar dashboard</div>;
+  if (!data) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-refetching={isFetching ? 'true' : undefined}>
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#161A62] uppercase">Resumo do recebimento</p>
+          <p className="mb-2 flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-[#161A62] uppercase">
+            Resumo do recebimento
+            {isFetching && <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#E56024] animate-pulse" aria-label="Atualizando" />}
+          </p>
           <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Central operacional</h1>
           <p className="mt-2 text-sm text-zinc-500">Acompanhe o fluxo de notas, vínculos e divergências em tempo real.</p>
         </div>

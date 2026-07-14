@@ -3,9 +3,11 @@ import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import Layout from "@/components/Layout";
+import { useQueryClient } from "@tanstack/react-query";
 import { AuthProvider, PERM, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useTheme } from "@/contexts/ThemeContext";
+import { prefetchCoreData } from "@/lib/queries";
 
 const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -21,15 +23,18 @@ const Users = lazy(() => import("@/pages/Users"));
 
 function RoutePreloader() {
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   useEffect(() => {
     if (!isAuthenticated) return;
+    // Aquece os dados do dashboard imediatamente após o login.
+    prefetchCoreData(queryClient);
     const timer = setTimeout(() => {
       import("@/pages/NfeImport");
       import("@/pages/Conference");
       import("@/pages/Products");
     }, 1500);
     return () => clearTimeout(timer);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, queryClient]);
   return null;
 }
 

@@ -49,7 +49,7 @@ code, .font-mono {
 
 @layer base {
     * { @apply border-border; }
-    body { @apply bg-background text-foreground; }
+    body { @apply text-foreground; background: transparent; }
 }
 
 @layer base {

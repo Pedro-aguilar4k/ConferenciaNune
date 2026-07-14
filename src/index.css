@@ -186,33 +186,59 @@ code, .font-mono {
     .login-footer { min-height: 44px; padding: 0 5vw; border-top: 1px solid var(--login-line); color: #9399a6; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 
     @media (max-width: 1023px) {
-        .login-header { min-height: 66px; padding: 0 24px; }
-        .login-stage { flex-direction: column; overflow-y: auto; }
-        .login-brand-panel { width: 100%; min-height: 260px; padding: 44px 28px 36px; }
-        .login-brand-copy { max-width: 72%; }
-        .login-brand-copy h1 { font-size: clamp(36px, 8vw, 52px); }
-        .login-brand-copy > p { display: none; }
-        .login-eyebrow { margin-bottom: 16px; }
-        .login-specs { display: none; }
+        .login-shell { height: 100svh; min-height: 600px; }
+        .login-header { min-height: 62px; padding: 0 24px; }
+        .login-stage { flex-direction: row; overflow: hidden; }
+        .login-brand-panel { width: 42%; min-height: 0; padding: 36px 28px; }
+        .login-brand-copy { max-width: 100%; }
+        .login-brand-copy h1 { font-size: clamp(32px, 5vw, 46px); }
+        .login-brand-copy > p,
+        .login-specs,
         .login-serial { display: none; }
-        .login-orbit-outer { top: 12%; right: -32%; width: 90vw; border-width: 54px; }
+        .login-eyebrow { margin-bottom: 16px; }
+        .login-orbit-outer { top: 21%; right: -58%; width: 90vw; border-width: 54px; }
         .login-orbit-inner { display: none; }
-        .login-form-panel { width: 100%; flex: 1 0 auto; padding: 48px 24px 56px; }
-        .login-form-wrap { width: min(100%, 430px); }
+        .login-form-panel { width: 58%; flex: 1 1 auto; padding: 32px 28px; }
+        .login-form-wrap { width: min(100%, 390px); }
+        .login-form-icon { margin-bottom: 18px; }
+        .login-form-heading { margin-bottom: 24px; }
+        .login-security { margin-top: 16px; }
     }
 
-    @media (max-width: 560px) {
+    @media (max-width: 700px) {
+        .login-header { min-height: 58px; padding: 0 18px; }
         .login-environment { font-size: 0; }
         .login-environment-dot { width: 8px; height: 8px; }
         .login-brand-mark { width: 44px; }
         .login-brand-name { font-size: 14px; }
-        .login-brand-panel { min-height: 250px; padding-top: 38px; }
-        .login-brand-copy { max-width: 67%; }
-        .login-brand-copy h1 { font-size: 34px; line-height: 1.02; }
-        .login-form-panel { padding-top: 38px; }
-        .login-footer { padding: 0 20px; }
+        .login-stage { flex-direction: column; }
+        .login-brand-panel { width: 100%; flex: 0 0 180px; min-height: 0; justify-content: center; padding: 22px 24px; }
+        .login-brand-copy { max-width: 66%; }
+        .login-brand-copy h1 { font-size: 30px; line-height: 1; }
+        .login-eyebrow { margin-bottom: 11px; font-size: 9px; }
+        .login-orbit-outer { top: 3%; right: -28%; width: 88vw; border-width: 42px; }
+        .login-form-panel { width: 100%; flex: 1 1 auto; min-height: 0; padding: 22px 24px; }
+        .login-form-wrap { width: min(100%, 380px); }
+        .login-form-icon { display: none; }
+        .login-form-heading { margin-bottom: 18px; }
+        .login-form-heading h2 { font-size: 27px; }
+        .login-form-heading > p:last-child { margin-top: 7px; }
+        .login-form { gap: 14px; }
+        .login-field { gap: 6px; }
+        .login-field input { height: 46px; }
+        .login-submit { height: 48px; }
+        .login-security { display: none; }
+        .login-footer { min-height: 36px; padding: 0 18px; justify-content: flex-end; }
         .login-footer span:first-child { display: none; }
-        .login-footer { justify-content: flex-end; }
+    }
+
+    @media (max-height: 700px) and (min-width: 701px) {
+        .login-header { min-height: 56px; }
+        .login-footer { min-height: 34px; }
+        .login-form-icon { display: none; }
+        .login-form-heading { margin-bottom: 20px; }
+        .login-form { gap: 14px; }
+        .login-security { margin-top: 12px; }
     }
 
     @media (prefers-reduced-motion: reduce) {

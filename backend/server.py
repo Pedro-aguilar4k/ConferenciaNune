@@ -116,6 +116,15 @@ class UserUpdateInput(BaseModel):
 
 @api_router.post("/auth/login")
 async def login(data: LoginInput):
+    if await db.usuarios.count_documents({}) == 0:
+        await db.usuarios.insert_one({
+            'username': 'admin',
+            'nome': 'Administrador',
+            'role': auth_svc.ROLE_ADMIN,
+            'password_hash': auth_svc.hash_password('admin'),
+            'ativo': True,
+            'created_at': datetime.now(timezone.utc).isoformat(),
+        })
     user = await db.usuarios.find_one({'username': data.username.lower().strip()})
     if not user or not auth_svc.verify_password(data.password, user.get('password_hash', '')):
         raise HTTPException(401, "Usuario ou senha invalidos")

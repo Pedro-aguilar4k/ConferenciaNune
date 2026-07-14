@@ -17,17 +17,32 @@ export default function ProductBinding() {
   const [codeInput, setCodeInput] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoStarting, setAutoStarting] = useState(false);
   const inputRef = useRef(null);
 
-  const fetchData = useCallback(async () => {
+  const startConference = useCallback(async () => {
+    setAutoStarting(true);
+    try {
+      await axios.post(`${API}/conferencias/iniciar/${notaId}`);
+      navigate(`/conferencia/${notaId}`);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Erro ao iniciar conferencia');
+      setAutoStarting(false);
+    }
+  }, [notaId, navigate]);
+
+  const fetchData = useCallback(async (autoStart = false) => {
     try {
       const res = await axios.get(`${API}/vinculacao/${notaId}`);
       setData(res.data);
+      if (autoStart && res.data.total_pendentes === 0) {
+        await startConference();
+      }
     } catch (e) {
       toast.error('Erro ao carregar dados da nota');
       navigate('/notas');
     } finally { setLoading(false); }
-  }, [notaId, navigate]);
+  }, [notaId, navigate, startConference]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { inputRef.current?.focus(); }, [data]);
@@ -51,7 +66,7 @@ export default function ProductBinding() {
       toast.success(`Vinculado: ${codigo}`);
       setCodeInput('');
       setNotFound(false);
-      await fetchData();
+      await fetchData(true);
     } catch (e) {
       if (e.response?.status === 409) {
         toast.error(e.response.data?.detail || `Codigo "${codigo}" ja foi vinculado a outro item desta nota.`);
@@ -74,7 +89,7 @@ export default function ProductBinding() {
           toast.success(`Produto ${codigo} cadastrado e vinculado!`);
           setCodeInput('');
           setNotFound(false);
-          await fetchData();
+          await fetchData(true);
         } catch (createErr) {
           if (createErr.response?.status === 400) {
             toast.error(`Codigo "${codigo}" ja existe no cadastro`);
@@ -91,16 +106,6 @@ export default function ProductBinding() {
   const handleEnter = async (e) => {
     if (e.key !== 'Enter' || !codeInput.trim()) return;
     await confirmBinding(codeInput.trim());
-  };
-
-  const handleStartConference = async () => {
-    try {
-      await axios.post(`${API}/conferencias/iniciar/${notaId}`);
-      toast.success('Conferencia iniciada!');
-      navigate(`/conferencia/${notaId}`);
-    } catch (e) {
-      toast.error(e.response?.data?.detail || 'Erro ao iniciar conferencia');
-    }
   };
 
   if (loading || !data) return <div className="text-zinc-500">Carregando...</div>;
@@ -182,11 +187,15 @@ export default function ProductBinding() {
         <div className="bg-[#121212] border-2 border-green-500/50 rounded-lg p-12 text-center">
           <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-400" />
           <h2 className="text-3xl font-bold text-green-400 mb-2">TODOS OS PRODUTOS VINCULADOS!</h2>
-          <p className="text-zinc-400 mb-8">Todos os {total} itens da nota possuem codigo interno. Pronto para conferir.</p>
-          <button onClick={handleStartConference}
-            className="inline-flex items-center gap-3 px-8 py-4 bg-green-600 text-white text-xl font-semibold rounded-lg hover:bg-green-500 transition-colors">
-            <PlayCircle className="h-7 w-7" /> Iniciar Conferencia
-          </button>
+          <p className="text-zinc-400 mb-6">Todos os {total} itens da nota possuem codigo interno.</p>
+          {autoStarting ? (
+            <p className="text-zinc-500 text-sm animate-pulse">Iniciando conferencia automaticamente...</p>
+          ) : (
+            <button onClick={startConference}
+              className="inline-flex items-center gap-3 px-8 py-4 bg-green-600 text-white text-xl font-semibold rounded-lg hover:bg-green-500 transition-colors">
+              <PlayCircle className="h-7 w-7" /> Iniciar Conferencia
+            </button>
+          )}
         </div>
       )}
 

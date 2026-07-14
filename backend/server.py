@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import asyncio
+import base64
 import logging
 from pydantic import BaseModel, Field, ConfigDict, BeforeValidator
 from typing import List, Optional, Annotated
@@ -22,6 +23,7 @@ from bson import ObjectId
 
 from services.matching import match_product as _match_product
 from services.xml_parser import parse_nfe_xml
+from services import sefaz
 
 ROOT_DIR = Path(__file__).parent
 PROJECT_ROOT = ROOT_DIR.parent
@@ -402,17 +404,20 @@ async def get_nota(nota_id: str):
     return {'nota': nota.model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items]}
 
 @api_router.post("/notas/importar-xml")
-async def importar_xml(file: UploadFile = File(...)):
-    content = await file.read()
-    try:
-        header, items = parse_nfe_xml(content)
-    except Exception as e:
-        logger.error(f"XML parse error: {e}")
-        raise HTTPException(400, f"Erro ao processar XML: {str(e)}")
+async def _importar_nfe_from_content(content, *, ignorar_duplicada=False):
+    """Faz o parse de um XML de NF-e e importa a nota + itens no banco.
+
+    Reutilizado tanto pelo upload manual quanto pela busca no SEFAZ.
+    Retorna dict com 'nota' e 'itens', ou {'duplicada': True, 'chave': ...}
+    quando a nota ja existe e ignorar_duplicada=True.
+    """
+    header, items = parse_nfe_xml(content)
 
     if header.get('chave'):
         existing = await db.notas.find_one({'chave': header['chave']})
         if existing:
+            if ignorar_duplicada:
+                return {'duplicada': True, 'chave': header['chave']}
             raise HTTPException(400, f"Nota com chave {header['chave']} ja importada")
 
     if header.get('fornecedor_cnpj'):
@@ -459,12 +464,179 @@ async def importar_xml(file: UploadFile = File(...)):
     items_docs = await db.itens_nota.find({'nota_id': nota_id}).to_list(1000)
     return {'nota': Nota.from_mongo(nota_doc).model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items_docs]}
 
+
+async def importar_xml(file: UploadFile = File(...)):
+    content = await file.read()
+    try:
+        return await _importar_nfe_from_content(content)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"XML parse error: {e}")
+        raise HTTPException(400, f"Erro ao processar XML: {str(e)}")
+
 @api_router.delete("/notas/{nota_id}")
 async def delete_nota(nota_id: str):
     await db.notas.delete_one({'_id': ObjectId(nota_id)})
     await db.itens_nota.delete_many({'nota_id': nota_id})
     await db.historico_leituras.delete_many({'nota_id': nota_id})
     return {"ok": True}
+
+# ── API: SEFAZ (Distribuicao DF-e) ─────────────────────────────────
+# Guarda o certificado A1 do usuario (uma unica config global).
+# NOTA DE SEGURANCA: em producao, prefira armazenar o .pfx em um cofre de
+# segredos (ex.: Vault) em vez do banco. Aqui guardamos em base64 para o fluxo
+# funcionar de ponta a ponta.
+CERT_CONFIG_ID = "sefaz_cert"
+
+
+class SefazBuscaInput(BaseModel):
+    ultimo_nsu: str = "0"
+    max_lotes: int = 5  # ate 5 lotes por acionamento (evita loop infinito)
+
+
+async def _get_cert_config():
+    return await db.config.find_one({"_id": CERT_CONFIG_ID})
+
+
+@api_router.get("/sefaz/certificado")
+async def get_certificado_status():
+    """Retorna se ha um certificado configurado (sem expor o arquivo/senha)."""
+    cfg = await _get_cert_config()
+    if not cfg:
+        return {"configurado": False}
+    return {
+        "configurado": True,
+        "cnpj": cfg.get("cnpj"),
+        "titular": cfg.get("titular"),
+        "validade": cfg.get("validade"),
+        "ambiente": cfg.get("ambiente", "homologacao"),
+        "ultimo_nsu": cfg.get("ultimo_nsu", "0"),
+    }
+
+
+@api_router.post("/sefaz/certificado")
+async def upload_certificado(
+    file: UploadFile = File(...),
+    senha: str = Query(...),
+    ambiente: str = Query("homologacao"),
+):
+    """Recebe o A1 (.pfx/.p12) + senha, valida e guarda a configuracao."""
+    pfx_bytes = await file.read()
+    try:
+        info = sefaz.validar_certificado(pfx_bytes, senha)
+    except sefaz.SefazError as e:
+        raise HTTPException(400, str(e))
+
+    if not info.cnpj:
+        raise HTTPException(400, "Nao foi possivel extrair o CNPJ do certificado.")
+
+    doc = {
+        "_id": CERT_CONFIG_ID,
+        "pfx_b64": base64.b64encode(pfx_bytes).decode("ascii"),
+        "senha": senha,
+        "cnpj": info.cnpj,
+        "titular": info.subject,
+        "validade": info.not_after,
+        "ambiente": ambiente,
+        "ultimo_nsu": "0",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.config.replace_one({"_id": CERT_CONFIG_ID}, doc, upsert=True)
+    return {
+        "configurado": True,
+        "cnpj": info.cnpj,
+        "titular": info.subject,
+        "validade": info.not_after,
+        "ambiente": ambiente,
+    }
+
+
+@api_router.delete("/sefaz/certificado")
+async def delete_certificado():
+    await db.config.delete_one({"_id": CERT_CONFIG_ID})
+    return {"ok": True}
+
+
+@api_router.post("/sefaz/buscar")
+async def buscar_notas_sefaz(data: SefazBuscaInput):
+    """Consulta a Distribuicao DF-e e importa automaticamente as NF-e novas."""
+    cfg = await _get_cert_config()
+    if not cfg:
+        raise HTTPException(400, "Nenhum certificado A1 configurado. Envie o certificado primeiro.")
+
+    pfx_bytes = base64.b64decode(cfg["pfx_b64"])
+    senha = cfg["senha"]
+    cnpj = cfg["cnpj"]
+    ambiente = cfg.get("ambiente", "homologacao")
+
+    ultimo_nsu = data.ultimo_nsu if data.ultimo_nsu != "0" else cfg.get("ultimo_nsu", "0")
+
+    importadas, duplicadas, resumos = [], 0, 0
+    ultima_resposta = {}
+    lotes = 0
+
+    while lotes < max(1, min(data.max_lotes, 20)):
+        lotes += 1
+        try:
+            resp = await asyncio.to_thread(
+                sefaz.consultar_distribuicao, pfx_bytes, senha, cnpj, ultimo_nsu, ambiente
+            )
+        except sefaz.SefazError as e:
+            raise HTTPException(502, str(e))
+
+        ultima_resposta = resp
+        c_stat = resp.get("cStat")
+
+        # 138 = documentos localizados; 137 = nenhum documento localizado
+        completas = sefaz.extrair_nfe_procs(resp.get("docs", []))
+        resumos += len(resp.get("docs", [])) - len(completas)
+
+        for xml in completas:
+            try:
+                r = await _importar_nfe_from_content(xml, ignorar_duplicada=True)
+                if r.get("duplicada"):
+                    duplicadas += 1
+                else:
+                    importadas.append({
+                        "chave": r["nota"].get("chave"),
+                        "numero": r["nota"].get("numero"),
+                        "fornecedor": r["nota"].get("fornecedor_nome"),
+                        "valor_total": r["nota"].get("valor_total"),
+                        "nota_id": r["nota"].get("id"),
+                    })
+            except Exception as e:
+                logger.error(f"Erro ao importar NF-e do SEFAZ: {e}")
+
+        ult = resp.get("ultNSU", "0")
+        maxn = resp.get("maxNSU", "0")
+        ultimo_nsu = ult
+
+        # Persiste o avanco do NSU para nao reprocessar
+        await db.config.update_one(
+            {"_id": CERT_CONFIG_ID}, {"$set": {"ultimo_nsu": ultimo_nsu}}
+        )
+
+        # Sem mais documentos ou cStat != 138 -> para
+        if c_stat != "138":
+            break
+        try:
+            if int(ult) >= int(maxn):
+                break
+        except (ValueError, TypeError):
+            break
+
+    return {
+        "cStat": ultima_resposta.get("cStat"),
+        "xMotivo": ultima_resposta.get("xMotivo"),
+        "ultimo_nsu": ultimo_nsu,
+        "max_nsu": ultima_resposta.get("maxNSU"),
+        "importadas": importadas,
+        "total_importadas": len(importadas),
+        "duplicadas": duplicadas,
+        "resumos_ignorados": resumos,
+        "lotes_consultados": lotes,
+    }
 
 # ── API: Conferencia ───────────────────────────────────────────────
 @api_router.post("/conferencias/iniciar/{nota_id}")

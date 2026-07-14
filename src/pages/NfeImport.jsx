@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { TEST_IDS } from '@/constants/testIds';
 import { API } from '@/lib/api';
+import SefazImport from '@/components/SefazImport';
 
 const statusMap = {
   pendente: { label: 'Pendente', class: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
@@ -86,6 +87,8 @@ export default function NfeImport() {
         <input ref={fileInputRef} data-testid={TEST_IDS.xmlUploadInput} type="file" accept=".xml" className="hidden" onChange={handleUpload} />
         {uploading && <p className="text-blue-400 text-sm">Processando...</p>}
       </div>
+
+      <SefazImport onImported={fetchNotas} />
 
       <div className="bg-[#121212] border border-[#27272A] rounded-md">
         <div className="p-4 border-b border-[#27272A] flex items-center gap-3">

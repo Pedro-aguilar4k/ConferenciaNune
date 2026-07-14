@@ -15,3 +15,6 @@ python-Levenshtein==0.27.3
 python-dateutil==2.9.0.post0
 python-multipart==0.0.32
 openpyxl>=3.1.0
+requests>=2.31.0
+requests-pkcs12>=1.24
+cryptography>=42.0.0

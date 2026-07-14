@@ -1,9 +1,9 @@
 import "@/App.css";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import Layout from "@/components/Layout";
-import { AuthProvider, PERM } from "@/contexts/AuthContext";
+import { AuthProvider, PERM, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const Login = lazy(() => import("@/pages/Login"));
@@ -17,6 +17,20 @@ const RecognitionCenter = lazy(() => import("@/pages/RecognitionCenter"));
 const ProductBinding = lazy(() => import("@/pages/ProductBinding"));
 const ConferenceReport = lazy(() => import("@/pages/ConferenceReport"));
 const Users = lazy(() => import("@/pages/Users"));
+
+function RoutePreloader() {
+  const { isAuthenticated } = useAuth();
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const timer = setTimeout(() => {
+      import("@/pages/NfeImport");
+      import("@/pages/Conference");
+      import("@/pages/Products");
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated]);
+  return null;
+}
 
 function PageFallback() {
   return (
@@ -38,6 +52,7 @@ function App() {
   return (
     <div className="App dark">
       <AuthProvider>
+        <RoutePreloader />
         <BrowserRouter>
           <Suspense fallback={<PageFallback />}>
             <Routes>

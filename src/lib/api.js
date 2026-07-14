@@ -1,5 +1,7 @@
 import axios from "axios";
 
+axios.defaults.timeout = 15000;
+
 const backendUrl = import.meta.env?.VITE_BACKEND_URL;
 
 export const API = backendUrl ? `${backendUrl}/api` : "/api";

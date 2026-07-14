@@ -51,7 +51,7 @@ code, .font-mono {
         --card-foreground: 0 0% 95%;
         --popover: 0 0% 7%;
         --popover-foreground: 0 0% 95%;
-        --primary: 237 47% 69%;
+        --primary: 75 9% 94%;
         --primary-foreground: 0 0% 5%;
         --secondary: 0 0% 10%;
         --secondary-foreground: 0 0% 90%;
@@ -63,7 +63,7 @@ code, .font-mono {
         --destructive-foreground: 0 0% 100%;
         --border: 0 0% 16%;
         --input: 0 0% 16%;
-        --ring: 237 47% 69%;
+        --ring: 75 9% 94%;
     }
 }
 
@@ -339,7 +339,7 @@ code, .font-mono {
     .brand-logo { background: transparent; filter: none; }
     .dark .brand-logo { filter: brightness(0) invert(1); opacity: .94; }
 
-    .dark .login-shell { --login-navy: #8589d8; --login-ink: #f1f1f1; --login-muted: #a6a6a6; --login-line: #292929; background: #090909; }
+    .dark .login-shell { --login-navy: #eef0ed; --login-ink: #f1f1f1; --login-muted: #a6a6a6; --login-line: #292929; background: #090909; }
     .dark .login-header, .dark .login-footer { background: #0b0b0b; }
     .dark .login-form-panel { background: #0f0f0f; }
     .dark .login-brand-panel { background: #151515; }
@@ -349,21 +349,21 @@ code, .font-mono {
     .dark .login-orbit { border-color: #272727; }
     .dark .login-eyebrow { color: #c2c2c2; }
     .dark .login-brand-copy h1 { color: #f4f4f4; }
-    .dark .login-brand-copy h1 strong, .dark .login-kicker { color: #a7aae5; }
+    .dark .login-brand-copy h1 strong, .dark .login-kicker { color: #eef0ed; }
     .dark .login-brand-copy > p { color: #ababab; }
     .dark .login-specs { border-color: #303030; }
     .dark .login-specs span { color: #919191; }
-    .dark .login-form-icon { border-color: #303030; color: #a7aae5; background: #181818; }
+    .dark .login-form-icon { border-color: #303030; color: #eef0ed; background: #181818; }
     .dark .login-field label { color: #bdbdbd; }
     .dark .login-field input { border-color: #303030; background: #090909; }
     .dark .login-field input:hover { border-color: #484848; }
-    .dark .login-field input:focus { border-color: #8589d8; box-shadow: 0 0 0 3px #8589d824; }
+    .dark .login-field input:focus { border-color: #eef0ed; box-shadow: 0 0 0 3px #eef0ed24; }
     .dark .login-password-toggle:hover, .dark .login-theme-toggle:hover { color: #f1f1f1; background: #202020; }
-    .dark .login-submit { color: #090909; background: #a7aae5; }
-    .dark .login-submit:hover:not(:disabled) { background: #b9bbec; }
+    .dark .login-submit { color: #090909; background: #eef0ed; }
+    .dark .login-submit:hover:not(:disabled) { background: #ffffff; }
     .dark .login-error { color: #ffb3b3; background: #281313; }
 
-    .dark .app-shell { --app-navy: #8589d8; --app-ink: #f1f1f1; --app-orange: #f28a50; --app-line: #292929; background: #090909 !important; color: #f1f1f1 !important; }
+    .dark .app-shell { --app-navy: #eef0ed; --app-ink: #f1f1f1; --app-orange: #f28a50; --app-line: #292929; background: #090909 !important; color: #f1f1f1 !important; }
     .dark .app-sidebar, .dark .app-topbar { background: #0d0d0d; }
     .dark .app-nav-link { color: #a6a6a6; }
     .dark .app-nav-link:hover { color: #f1f1f1; background: #191919; }
@@ -372,7 +372,7 @@ code, .font-mono {
     .dark .app-icon-button { color: #a6a6a6; }
     .dark .app-icon-button:hover { border-color: #303030; color: #fff; background: #1b1b1b; }
     .dark .app-user-card { background: #151515; }
-    .dark .app-user-avatar { color: #090909; background: #b0b2e8; }
+    .dark .app-user-avatar { color: #090909; background: #eef0ed; }
     .dark .app-user-card p:first-child, .dark .app-sidebar-brand p:first-child, .dark .app-topbar p:last-child { color: #f1f1f1 !important; }
     .dark .app-content [class*='text-[#F4F4F5]'], .dark .app-content :is(h1, h2, h3) { color: #f1f1f1 !important; }
     .dark .app-content [class*='text-[#A1A1AA]'], .dark .app-content .text-zinc-300, .dark .app-content .text-zinc-400 { color: #bdbdbd !important; }
@@ -381,13 +381,13 @@ code, .font-mono {
     .dark .app-content [class*='hover:bg-[#1A1A1A]']:hover, .dark .app-content [class*='hover:bg-[#27272A]']:hover { background-color: #1a1a1a !important; }
     .dark .app-content input:not([type='checkbox']):not([type='radio']), .dark .app-content textarea, .dark .app-content button[role='combobox'] { color: #f1f1f1 !important; border-color: #303030 !important; background-color: #0b0b0b !important; }
     .dark .app-content input::placeholder, .dark .app-content textarea::placeholder { color: #747474 !important; }
-    .dark .app-content input:focus, .dark .app-content textarea:focus, .dark .app-content button[role='combobox']:focus { border-color: #8589d8 !important; box-shadow: 0 0 0 3px #8589d820 !important; }
+    .dark .app-content input:focus, .dark .app-content textarea:focus, .dark .app-content button[role='combobox']:focus { border-color: #eef0ed !important; box-shadow: 0 0 0 3px #eef0ed20 !important; }
     .dark .app-content thead th { color: #b5b5b5 !important; background: #181818 !important; }
     .dark .app-content tbody tr { border-color: #282828 !important; background: #111; }
     .dark .app-content tbody tr:hover { background: #191919 !important; }
     .dark .app-content tbody td { color: #dedede; }
     .dark .app-content [role='progressbar'] { background: #262626 !important; }
-    .dark .app-content [role='progressbar'] > div { background: #a7aae5 !important; }
+    .dark .app-content [role='progressbar'] > div { background: #eef0ed !important; }
     .dark .app-content .border-dashed { background: #121212 !important; }
     .dark .app-content .border-dashed:hover { background: #181818 !important; }
     .dark .app-content .min-h-\[380px\] { background-image: linear-gradient(#252525 1px, transparent 1px), linear-gradient(90deg, #252525 1px, transparent 1px) !important; }
@@ -419,4 +419,4 @@ code, .font-mono {
 ::-webkit-scrollbar-thumb:hover { background: #161a62; }
 .dark ::-webkit-scrollbar-track { background: #090909; }
 .dark ::-webkit-scrollbar-thumb { background: #343434; }
-.dark ::-webkit-scrollbar-thumb:hover { background: #8589d8; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #eef0ed; }

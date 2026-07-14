@@ -27,7 +27,7 @@ export default function Dashboard() {
     return [
       { label: 'Conferidas Hoje', value: data.conferidas_hoje, icon: FileCheck, color: 'text-green-400', border: 'border-green-500/20' },
       { label: 'Pendentes', value: data.pendentes, icon: Clock, color: 'text-yellow-400', border: 'border-yellow-500/20' },
-      { label: 'Tempo Medio', value: `${data.tempo_medio_min}m`, icon: Clock, color: 'text-blue-400', border: 'border-blue-500/20' },
+      { label: 'Tempo Medio', value: `${data.tempo_medio_min}m`, icon: Clock, color: 'text-[#7B84E0]', border: 'border-[#4B52C4]/30' },
       { label: 'Divergencias', value: data.divergentes, icon: AlertTriangle, color: 'text-red-400', border: 'border-red-500/20' },
       { label: 'Sem Vinculo', value: data.sem_vinculo, icon: Link2, color: 'text-orange-400', border: 'border-orange-500/20' },
       { label: 'Automacao', value: `${data.pct_identificacao_auto}%`, icon: Target, color: 'text-emerald-400', border: 'border-emerald-500/20' },
@@ -49,19 +49,19 @@ export default function Dashboard() {
     [methodData]
   );
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-[#71717A]">Carregando dashboard...</div>;
-  if (!data) return <div className="text-[#71717A]">Erro ao carregar dashboard</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-[#7B84E0]">Carregando dashboard...</div>;
+  if (!data) return <div className="text-[#7B84E0]">Erro ao carregar dashboard</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Dashboard</h1>
+        <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#E8E9FF] tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[#71717A] text-xs">
-            <Brain className="h-3 w-3 text-blue-400" />
+          <div className="flex items-center gap-2 text-[#7B84E0] text-xs">
+            <Brain className="h-3 w-3 text-[#7B84E0]" />
             <span>{data.total_aprendizado || 0} aprendizados</span>
           </div>
-          <div className="flex items-center gap-2 text-[#71717A] text-xs">
+          <div className="flex items-center gap-2 text-[#7B84E0] text-xs">
             <Zap className="h-3 w-3 text-emerald-400" />
             <span>{data.total_equivalencias} equivalencias</span>
           </div>
@@ -70,19 +70,19 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map(s => (
-          <div key={s.label} className={`bg-[#121212] border ${s.border} rounded-md p-4 transition-all duration-150 hover:bg-[#1A1A1A]`}>
+          <div key={s.label} className={`bg-[#12134A] border ${s.border} rounded-md p-4 transition-all duration-150 hover:bg-[#1E2070]`}>
             <div className={`flex items-center gap-2 mb-3 ${s.color}`}>
               <s.icon className="h-3.5 w-3.5" />
               <span className="text-[10px] tracking-[0.12em] uppercase text-zinc-500">{s.label}</span>
             </div>
-            <p className="text-2xl font-mono font-semibold text-[#F4F4F5]">{s.value}</p>
+            <p className="text-2xl font-mono font-semibold text-[#E8E9FF]">{s.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
+      <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md p-5">
         <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4 flex items-center gap-2">
-          <Brain className="h-3.5 w-3.5 text-blue-400" />
+          <Brain className="h-3.5 w-3.5 text-[#7B84E0]" />
           Motor de Reconhecimento Inteligente
         </h3>
         <div className="grid md:grid-cols-4 gap-6">
@@ -90,23 +90,23 @@ export default function Dashboard() {
             <p className="text-xs text-zinc-500 mb-2">Precisao do Reconhecimento</p>
             <div className="flex items-center gap-3">
               <div className="flex-1">
-                <Progress value={Math.min(data.precisao_reconhecimento, 100)} className="h-2.5 bg-[#1A1A1A]" />
+                <Progress value={Math.min(data.precisao_reconhecimento, 100)} className="h-2.5 bg-[#1E2070]" />
               </div>
-              <span className="font-mono text-sm text-[#F4F4F5] w-12 text-right">{data.precisao_reconhecimento}%</span>
+              <span className="font-mono text-sm text-[#E8E9FF] w-12 text-right">{data.precisao_reconhecimento}%</span>
             </div>
           </div>
           <div>
             <p className="text-xs text-zinc-500 mb-2">Identificacao Automatica</p>
             <div className="flex items-center gap-3">
               <div className="flex-1">
-                <Progress value={Math.min(data.pct_identificacao_auto, 100)} className="h-2.5 bg-[#1A1A1A]" />
+                <Progress value={Math.min(data.pct_identificacao_auto, 100)} className="h-2.5 bg-[#1E2070]" />
               </div>
-              <span className="font-mono text-sm text-[#F4F4F5] w-12 text-right">{data.pct_identificacao_auto}%</span>
+              <span className="font-mono text-sm text-[#E8E9FF] w-12 text-right">{data.pct_identificacao_auto}%</span>
             </div>
           </div>
           <div>
             <p className="text-xs text-zinc-500 mb-2">Total de Equivalencias</p>
-            <p className="text-3xl font-mono font-semibold text-[#F4F4F5]">{data.total_equivalencias}</p>
+            <p className="text-3xl font-mono font-semibold text-[#E8E9FF]">{data.total_equivalencias}</p>
           </div>
           <div>
             <p className="text-xs text-zinc-500 mb-2">Itens Pendentes</p>
@@ -116,7 +116,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
+        <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md p-5">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Reconhecimento por Metodo</h3>
           {methodData.length > 0 ? (
             <div className="flex items-center gap-6">
@@ -138,7 +138,7 @@ export default function Dashboard() {
                       <span className="text-sm text-zinc-400">{d.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm text-[#F4F4F5]">{d.value}</span>
+                      <span className="font-mono text-sm text-[#E8E9FF]">{d.value}</span>
                       <span className="text-xs text-zinc-500">({totalMethodItems > 0 ? Math.round(d.value / totalMethodItems * 100) : 0}%)</span>
                     </div>
                   </div>
@@ -150,7 +150,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
+        <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md p-5">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Notas por Dia (Ultimos 7 dias)</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={data.notas_por_dia}>
@@ -165,7 +165,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
+        <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md p-5">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Top Fornecedores por Volume</h3>
           {data.top_fornecedores.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
@@ -182,19 +182,19 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
+        <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md p-5">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Fornecedores - Taxa de Erro</h3>
           {data.fornecedor_errors?.length > 0 ? (
             <div className="space-y-3">
               {data.fornecedor_errors.map((f, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex-1 min-w-0 mr-3">
-                    <p className="text-sm text-[#F4F4F5] truncate">{f.nome}</p>
+                    <p className="text-sm text-[#E8E9FF] truncate">{f.nome}</p>
                     <p className="text-xs text-zinc-500">{f.sem_vinculo}/{f.total} sem vinculo</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="w-20">
-                      <Progress value={f.taxa_erro} className="h-2 bg-[#1A1A1A]" />
+                      <Progress value={f.taxa_erro} className="h-2 bg-[#1E2070]" />
                     </div>
                     <span className={`font-mono text-sm w-12 text-right ${f.taxa_erro > 50 ? 'text-red-400' : f.taxa_erro > 20 ? 'text-yellow-400' : 'text-green-400'}`}>
                       {f.taxa_erro}%

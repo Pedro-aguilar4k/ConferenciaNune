@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, Loader2, ShieldCheck } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
 
 export default function Login() {
   const { login, user } = useAuth();
@@ -14,7 +14,6 @@ export default function Login() {
 
   const from = location.state?.from?.pathname || '/';
 
-  // Se ja estiver logado (ou apos login), sai da tela de login.
   useEffect(() => {
     if (user) navigate(from, { replace: true });
   }, [user, from, navigate]);
@@ -35,22 +34,23 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0D0E2A] px-4">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <div className="h-12 w-12 rounded-xl bg-blue-600/15 border border-blue-500/25 flex items-center justify-center mb-4">
-            <ShieldCheck className="h-6 w-6 text-blue-400" />
-          </div>
-          <h1 className="font-heading text-2xl font-semibold text-[#F4F4F5] tracking-tight">NF-e Check</h1>
-          <p className="text-sm text-[#71717A] mt-1">Entre para acessar o sistema</p>
+          <img
+            src="/logo-full.png"
+            alt="NuneDiesel Auto Pecas"
+            className="h-28 object-contain mb-6"
+          />
+          <p className="text-sm text-[#7B84E0] mt-1 tracking-wide">Sistema de Conferencia de NF-e</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-[#121212] border border-[#27272A] rounded-lg p-6 space-y-4"
+          className="bg-[#12134A] border border-[#2D3090]/60 rounded-lg p-6 space-y-4"
         >
           <div className="space-y-1.5">
-            <label htmlFor="username" className="text-[11px] uppercase tracking-wider text-[#A1A1AA]">
+            <label htmlFor="username" className="text-[11px] uppercase tracking-wider text-[#9BA0D0]">
               Usuario
             </label>
             <input
@@ -61,13 +61,13 @@ export default function Login() {
               onChange={(e) => setUsername(e.target.value)}
               required
               autoFocus
-              className="w-full bg-[#0A0A0A] border border-[#27272A] rounded-md px-3 py-2.5 text-sm text-[#F4F4F5] placeholder:text-[#52525B] focus:outline-none focus:border-blue-500/60 transition-colors"
+              className="w-full bg-[#0D0E2A] border border-[#2D3090]/60 rounded-md px-3 py-2.5 text-sm text-[#E8E9FF] placeholder:text-[#4B52C4]/60 focus:outline-none focus:border-[#4B52C4] transition-colors"
               placeholder="seu.usuario"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="password" className="text-[11px] uppercase tracking-wider text-[#A1A1AA]">
+            <label htmlFor="password" className="text-[11px] uppercase tracking-wider text-[#9BA0D0]">
               Senha
             </label>
             <input
@@ -77,8 +77,8 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-[#0A0A0A] border border-[#27272A] rounded-md px-3 py-2.5 text-sm text-[#F4F4F5] placeholder:text-[#52525B] focus:outline-none focus:border-blue-500/60 transition-colors"
-              placeholder="********"
+              className="w-full bg-[#0D0E2A] border border-[#2D3090]/60 rounded-md px-3 py-2.5 text-sm text-[#E8E9FF] placeholder:text-[#4B52C4]/60 focus:outline-none focus:border-[#4B52C4] transition-colors"
+              placeholder="••••••••"
             />
           </div>
 
@@ -91,7 +91,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md px-4 py-2.5 transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-[#2D3090] hover:bg-[#3A42B0] disabled:opacity-60 disabled:cursor-not-allowed text-[#E8E9FF] text-sm font-semibold rounded-md px-4 py-2.5 transition-colors border border-[#4B52C4]/30"
           >
             {loading ? (
               <>
@@ -107,7 +107,7 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-center text-[11px] text-[#52525B] mt-6">NF-e Conference v2.0</p>
+        <p className="text-center text-[11px] text-[#4B52C4]/70 mt-6">NuneDiesel Auto Pecas &mdash; Conferencia v2.0</p>
       </div>
     </div>
   );

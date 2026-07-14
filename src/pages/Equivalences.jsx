@@ -38,7 +38,7 @@ export default function Equivalences() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Equivalencias</h1>
+          <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#E8E9FF] tracking-tight">Equivalencias</h1>
           <p className="text-zinc-500 text-sm mt-1">Vinculos aprendidos pelo sistema ({equivalencias.length})</p>
         </div>
       </div>
@@ -46,19 +46,19 @@ export default function Equivalences() {
       <div className="flex items-center gap-3">
         <Filter className="h-4 w-4 text-zinc-500" />
         <Select value={filterCnpj} onValueChange={setFilterCnpj}>
-          <SelectTrigger className="w-[300px] bg-[#121212] border-[#27272A] text-[#F4F4F5]">
+          <SelectTrigger className="w-[300px] bg-[#12134A] border-[#2D3090]/60 text-[#E8E9FF]">
             <SelectValue placeholder="Filtrar por fornecedor" />
           </SelectTrigger>
-          <SelectContent className="bg-[#121212] border-[#27272A]">
-            <SelectItem value="all" className="text-[#F4F4F5] focus:bg-[#1A1A1A] focus:text-[#F4F4F5]">Todos os fornecedores</SelectItem>
+          <SelectContent className="bg-[#12134A] border-[#2D3090]/60">
+            <SelectItem value="all" className="text-[#E8E9FF] focus:bg-[#1E2070] focus:text-[#E8E9FF]">Todos os fornecedores</SelectItem>
             {fornecedores.map(f => (
-              <SelectItem key={f.cnpj} value={f.cnpj} className="text-[#F4F4F5] focus:bg-[#1A1A1A] focus:text-[#F4F4F5]">{f.nome}</SelectItem>
+              <SelectItem key={f.cnpj} value={f.cnpj} className="text-[#E8E9FF] focus:bg-[#1E2070] focus:text-[#E8E9FF]">{f.nome}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden">
+      <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md overflow-hidden">
         {equivalencias.length === 0 ? (
           <div className="p-8 text-center text-zinc-600">
             <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -68,24 +68,24 @@ export default function Equivalences() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent border-[#27272A]">
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Fornecedor</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Cod. Forn.</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Descricao NF-e</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Cod. Interno</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Descricao Interna</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Data</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1A1A1A]">Acoes</TableHead>
+              <TableRow className="hover:bg-transparent border-[#2D3090]/60">
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Fornecedor</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Cod. Forn.</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Descricao NF-e</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Cod. Interno</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Descricao Interna</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Data</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.1em] text-zinc-500 bg-[#1E2070]">Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {equivalencias.map(eq => (
-                <TableRow key={eq.id} className="border-[#1A1A1A] hover:bg-[#1A1A1A]/50">
-                  <TableCell className="text-sm text-[#A1A1AA]">{eq.fornecedor_nome}</TableCell>
-                  <TableCell className="font-mono text-sm text-[#F4F4F5]">{eq.codigo_fornecedor}</TableCell>
+                <TableRow key={eq.id} className="border-[#1A1A1A] hover:bg-[#1E2070]/50">
+                  <TableCell className="text-sm text-[#9BA0D0]">{eq.fornecedor_nome}</TableCell>
+                  <TableCell className="font-mono text-sm text-[#E8E9FF]">{eq.codigo_fornecedor}</TableCell>
                   <TableCell className="text-sm text-zinc-500 max-w-[180px] truncate">{eq.descricao_nfe}</TableCell>
-                  <TableCell className="font-mono text-sm text-blue-400">{eq.produto_interno_codigo}</TableCell>
-                  <TableCell className="text-sm text-[#F4F4F5] max-w-[180px] truncate">{eq.produto_interno_descricao}</TableCell>
+                  <TableCell className="font-mono text-sm text-[#7B84E0]">{eq.produto_interno_codigo}</TableCell>
+                  <TableCell className="text-sm text-[#E8E9FF] max-w-[180px] truncate">{eq.produto_interno_descricao}</TableCell>
                   <TableCell className="text-xs text-zinc-500">{eq.created_at ? new Date(eq.created_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
                   <TableCell>
                     <button onClick={() => handleDelete(eq.id)}

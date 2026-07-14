@@ -92,18 +92,18 @@ export default function RecognitionCenter() {
     [items]
   );
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-[#71717A]">Carregando...</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-[#7B84E0]">Carregando...</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Central de Reconhecimento</h1>
+          <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#E8E9FF] tracking-tight">Central de Reconhecimento</h1>
           <p className="text-zinc-500 text-sm mt-1">Produtos pendentes de vinculacao inteligente</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-2xl font-mono font-semibold text-[#F4F4F5]">{pendingCount}</p>
+            <p className="text-2xl font-mono font-semibold text-[#E8E9FF]">{pendingCount}</p>
             <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Pendentes</p>
           </div>
           <div className="text-right">
@@ -116,22 +116,22 @@ export default function RecognitionCenter() {
       <div className="flex items-center gap-3">
         <Filter className="h-4 w-4 text-zinc-500" />
         <Select value={filterCnpj} onValueChange={setFilterCnpj}>
-          <SelectTrigger className="w-[300px] bg-[#121212] border-[#27272A] text-[#F4F4F5]">
+          <SelectTrigger className="w-[300px] bg-[#12134A] border-[#2D3090]/60 text-[#E8E9FF]">
             <SelectValue placeholder="Filtrar por fornecedor" />
           </SelectTrigger>
-          <SelectContent className="bg-[#121212] border-[#27272A]">
-            <SelectItem value="all" className="text-[#F4F4F5] focus:bg-[#1A1A1A] focus:text-[#F4F4F5]">Todos os fornecedores</SelectItem>
+          <SelectContent className="bg-[#12134A] border-[#2D3090]/60">
+            <SelectItem value="all" className="text-[#E8E9FF] focus:bg-[#1E2070] focus:text-[#E8E9FF]">Todos os fornecedores</SelectItem>
             {fornecedores.map(f => (
-              <SelectItem key={f.cnpj} value={f.cnpj} className="text-[#F4F4F5] focus:bg-[#1A1A1A] focus:text-[#F4F4F5]">{f.nome}</SelectItem>
+              <SelectItem key={f.cnpj} value={f.cnpj} className="text-[#E8E9FF] focus:bg-[#1E2070] focus:text-[#E8E9FF]">{f.nome}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
       {items.length === 0 ? (
-        <div className="bg-[#121212] border border-[#27272A] rounded-md p-12 text-center">
+        <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md p-12 text-center">
           <Brain className="h-10 w-10 text-green-400 mx-auto mb-3 opacity-60" />
-          <p className="text-[#F4F4F5] font-medium">Todos os produtos foram reconhecidos!</p>
+          <p className="text-[#E8E9FF] font-medium">Todos os produtos foram reconhecidos!</p>
           <p className="text-zinc-500 text-sm mt-1">Nenhum produto pendente de vinculacao</p>
         </div>
       ) : (
@@ -141,7 +141,7 @@ export default function RecognitionCenter() {
             const bestSuggestion = item.sugestoes?.[0];
             return (
               <div key={item.id}
-                className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden transition-all duration-150 hover:border-[#3f3f46]">
+                className="bg-[#12134A] border border-[#2D3090]/60 rounded-md overflow-hidden transition-all duration-150 hover:border-[#3f3f46]">
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -150,7 +150,7 @@ export default function RecognitionCenter() {
                         <span className="text-zinc-600">|</span>
                         <span className="text-zinc-500 text-xs">{item.fornecedor_nome || '-'}</span>
                       </div>
-                      <p className="text-[#F4F4F5] text-sm font-medium truncate">{item.descricao_nfe}</p>
+                      <p className="text-[#E8E9FF] text-sm font-medium truncate">{item.descricao_nfe}</p>
                       <div className="flex items-center gap-4 mt-1.5">
                         <span className="text-zinc-500 text-xs font-mono">cProd: {item.cprod}</span>
                         <span className="text-zinc-500 text-xs font-mono">EAN: {item.ean || 'N/A'}</span>
@@ -170,7 +170,7 @@ export default function RecognitionCenter() {
                         </button>
                       )}
                       <button onClick={() => openMatchDialog(item)}
-                        className="p-1.5 bg-blue-600/20 hover:bg-blue-600/30 rounded text-blue-400 transition-colors" title="Alterar / Buscar">
+                        className="p-1.5 bg-[#2D3090]/30 hover:bg-blue-600/30 rounded text-[#7B84E0] transition-colors" title="Alterar / Buscar">
                         <Search className="h-4 w-4" />
                       </button>
                       <button onClick={() => handleIgnore(item.id)}
@@ -178,7 +178,7 @@ export default function RecognitionCenter() {
                         <X className="h-4 w-4" />
                       </button>
                       <button onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                        className="p-1.5 hover:bg-[#1A1A1A] rounded text-zinc-400 transition-colors">
+                        className="p-1.5 hover:bg-[#1E2070] rounded text-zinc-400 transition-colors">
                         {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </button>
                     </div>
@@ -186,23 +186,23 @@ export default function RecognitionCenter() {
 
                   {bestSuggestion && !isExpanded && (
                     <div className="mt-2 flex items-center gap-2 text-xs">
-                      <Brain className="h-3 w-3 text-blue-400" />
+                      <Brain className="h-3 w-3 text-[#7B84E0]" />
                       <span className="text-zinc-500">Melhor sugestao:</span>
-                      <span className="font-mono text-blue-400">{bestSuggestion.produto.codigo}</span>
+                      <span className="font-mono text-[#7B84E0]">{bestSuggestion.produto.codigo}</span>
                       <span className="text-zinc-400">{bestSuggestion.produto.descricao}</span>
                     </div>
                   )}
                 </div>
 
                 {isExpanded && item.sugestoes?.length > 0 && (
-                  <div className="border-t border-[#27272A] bg-[#0A0A0A] p-4">
+                  <div className="border-t border-[#2D3090]/60 bg-[#0D0E2A] p-4">
                     <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-3">Sugestoes ({item.sugestoes.length})</p>
                     <div className="space-y-2">
                       {item.sugestoes.map((s, i) => (
-                        <div key={i} className="flex items-center justify-between bg-[#121212] border border-[#27272A] rounded p-3">
+                        <div key={i} className="flex items-center justify-between bg-[#12134A] border border-[#2D3090]/60 rounded p-3">
                           <div className="flex items-center gap-3">
-                            <span className="font-mono text-sm text-blue-400">{s.produto.codigo}</span>
-                            <span className="text-sm text-[#F4F4F5]">{s.produto.descricao}</span>
+                            <span className="font-mono text-sm text-[#7B84E0]">{s.produto.codigo}</span>
+                            <span className="text-sm text-[#E8E9FF]">{s.produto.descricao}</span>
                             {s.criterios?.map((c, ci) => (
                               <Badge key={ci} className={`text-[9px] ${c.bonus ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'} border`}>
                                 {c.criterio}: {c.peso}
@@ -212,7 +212,7 @@ export default function RecognitionCenter() {
                           <div className="flex items-center gap-2">
                             <Badge className={`${confiancaBadge(s.similaridade)} border text-xs`}>{s.similaridade}%</Badge>
                             <button onClick={() => handleConfirm(item, s.produto.id)}
-                              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-500 transition-colors">
+                              className="px-3 py-1 bg-[#2D3090] text-white text-xs rounded hover:bg-[#3A42B0] transition-colors">
                               Confirmar
                             </button>
                           </div>
@@ -223,11 +223,11 @@ export default function RecognitionCenter() {
                 )}
 
                 {isExpanded && (!item.sugestoes || item.sugestoes.length === 0) && (
-                  <div className="border-t border-[#27272A] bg-[#0A0A0A] p-4 text-center">
+                  <div className="border-t border-[#2D3090]/60 bg-[#0D0E2A] p-4 text-center">
                     <AlertCircle className="h-5 w-5 text-zinc-600 mx-auto mb-2" />
                     <p className="text-zinc-500 text-sm">Nenhuma sugestao automatica</p>
                     <button onClick={() => openMatchDialog(item)}
-                      className="mt-2 px-4 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-500 transition-colors">
+                      className="mt-2 px-4 py-1.5 bg-[#2D3090] text-white text-xs rounded hover:bg-[#3A42B0] transition-colors">
                       Buscar Produto Manualmente
                     </button>
                   </div>
@@ -239,7 +239,7 @@ export default function RecognitionCenter() {
       )}
 
       <Dialog open={matchDialogOpen} onOpenChange={setMatchDialogOpen}>
-        <DialogContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5] max-w-lg">
+        <DialogContent className="bg-[#12134A] border-[#2D3090]/60 text-[#E8E9FF] max-w-lg">
           <DialogHeader>
             <DialogTitle>Vincular Produto</DialogTitle>
             <DialogDescription className="text-zinc-500">
@@ -255,12 +255,12 @@ export default function RecognitionCenter() {
                   className={`w-full text-left p-3 rounded border transition-all ${
                     selectedProduct === s.produto.id
                       ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-[#27272A] bg-[#0A0A0A] hover:border-zinc-600'
+                      : 'border-[#2D3090]/60 bg-[#0D0E2A] hover:border-zinc-600'
                   }`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-mono text-sm text-blue-400 mr-2">{s.produto.codigo}</span>
-                      <span className="text-sm text-[#F4F4F5]">{s.produto.descricao}</span>
+                      <span className="font-mono text-sm text-[#7B84E0] mr-2">{s.produto.codigo}</span>
+                      <span className="text-sm text-[#E8E9FF]">{s.produto.descricao}</span>
                     </div>
                     <Badge className={`${confiancaBadge(s.similaridade)} border text-xs`}>{s.similaridade}%</Badge>
                   </div>
@@ -273,7 +273,7 @@ export default function RecognitionCenter() {
             <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-2">Busca Manual</p>
             <Input value={productSearch} onChange={e => handleProductSearch(e.target.value)}
               placeholder="Buscar por codigo ou descricao..."
-              className="bg-[#0A0A0A] border-[#27272A] text-[#F4F4F5] mb-2" />
+              className="bg-[#0D0E2A] border-[#2D3090]/60 text-[#E8E9FF] mb-2" />
             {searchResults.length > 0 && (
               <div className="space-y-1 max-h-[200px] overflow-auto">
                 {searchResults.map(p => (
@@ -281,10 +281,10 @@ export default function RecognitionCenter() {
                     className={`w-full text-left p-2 rounded border transition-all text-sm ${
                       selectedProduct === p.id
                         ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-[#27272A] bg-[#0A0A0A] hover:border-zinc-600'
+                        : 'border-[#2D3090]/60 bg-[#0D0E2A] hover:border-zinc-600'
                     }`}>
-                    <span className="font-mono text-blue-400 mr-2">{p.codigo}</span>
-                    <span className="text-[#F4F4F5]">{p.descricao}</span>
+                    <span className="font-mono text-[#7B84E0] mr-2">{p.codigo}</span>
+                    <span className="text-[#E8E9FF]">{p.descricao}</span>
                   </button>
                 ))}
               </div>
@@ -292,9 +292,9 @@ export default function RecognitionCenter() {
           </div>
 
           <div className="flex justify-end gap-2 mt-2">
-            <button onClick={() => setMatchDialogOpen(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors">Cancelar</button>
+            <button onClick={() => setMatchDialogOpen(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-[#E8E9FF] transition-colors">Cancelar</button>
             <button onClick={handleConfirmMatch} disabled={!selectedProduct}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-500 disabled:opacity-50 transition-colors">
+              className="px-4 py-2 bg-[#2D3090] text-white rounded-md text-sm hover:bg-[#3A42B0] disabled:opacity-50 transition-colors">
               Confirmar Vinculo
             </button>
           </div>

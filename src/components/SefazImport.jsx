@@ -100,16 +100,16 @@ export default function SefazImport({ onImported }) {
   };
 
   return (
-    <div className="bg-[#121212] border border-[#27272A] rounded-md">
+    <div className="bg-[#12134A] border border-[#2D3090]/60 rounded-md">
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-3 p-4 text-left"
       >
         <div className="h-8 w-8 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
-          <CloudDownload className="h-4 w-4 text-blue-400" />
+          <CloudDownload className="h-4 w-4 text-[#7B84E0]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[#F4F4F5] font-medium text-sm">Buscar notas no SEFAZ</p>
+          <p className="text-[#E8E9FF] font-medium text-sm">Buscar notas no SEFAZ</p>
           <p className="text-xs text-zinc-500 mt-0.5">
             Distribuição de DF-e — importa notas emitidas contra o seu CNPJ usando certificado A1
           </p>
@@ -123,7 +123,7 @@ export default function SefazImport({ onImported }) {
       </button>
 
       {open && (
-        <div className="border-t border-[#27272A] p-4 space-y-4">
+        <div className="border-t border-[#2D3090]/60 p-4 space-y-4">
           {loading ? (
             <p className="text-sm text-zinc-500">Carregando...</p>
           ) : cert ? (
@@ -142,7 +142,7 @@ export default function SefazImport({ onImported }) {
                 <button
                   onClick={handleBuscar}
                   disabled={buscando}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-medium rounded-md px-4 py-2.5 transition-colors"
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-[#2D3090] hover:bg-[#3A42B0] disabled:opacity-60 text-white text-sm font-medium rounded-md px-4 py-2.5 transition-colors"
                 >
                   {buscando
                     ? <><Loader2 className="h-4 w-4 animate-spin" /> Consultando SEFAZ...</>
@@ -150,15 +150,15 @@ export default function SefazImport({ onImported }) {
                 </button>
                 <button
                   onClick={handleRemoverCert}
-                  className="inline-flex items-center justify-center gap-2 border border-[#27272A] hover:border-red-500/40 hover:text-red-400 text-zinc-400 text-sm rounded-md px-4 py-2.5 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 border border-[#2D3090]/60 hover:border-red-500/40 hover:text-red-400 text-zinc-400 text-sm rounded-md px-4 py-2.5 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" /> Remover certificado
                 </button>
               </div>
 
               {resultado && (
-                <div className="bg-[#1A1A1A] border border-[#27272A] rounded-md p-3 text-sm space-y-1">
-                  <p className="text-[#F4F4F5]">
+                <div className="bg-[#1E2070] border border-[#2D3090]/60 rounded-md p-3 text-sm space-y-1">
+                  <p className="text-[#E8E9FF]">
                     <span className="text-green-400 font-medium">{resultado.total_importadas}</span> importada(s),{' '}
                     <span className="text-zinc-400">{resultado.duplicadas}</span> já existentes,{' '}
                     <span className="text-zinc-400">{resultado.resumos_ignorados}</span> resumo(s) ignorado(s)
@@ -169,7 +169,7 @@ export default function SefazImport({ onImported }) {
                   {resultado.importadas?.length > 0 && (
                     <ul className="mt-2 space-y-1">
                       {resultado.importadas.map((n) => (
-                        <li key={n.chave} className="text-xs text-[#A1A1AA] font-mono">
+                        <li key={n.chave} className="text-xs text-[#9BA0D0] font-mono">
                           NF {n.numero} · {n.fornecedor} · R$ {Number(n.valor_total || 0).toFixed(2)}
                         </li>
                       ))}
@@ -194,7 +194,7 @@ export default function SefazImport({ onImported }) {
                       value={senha}
                       onChange={e => setSenha(e.target.value)}
                       placeholder="Senha do arquivo A1"
-                      className="w-full pl-8 pr-3 py-2 text-sm bg-[#1A1A1A] border border-[#27272A] rounded text-[#F4F4F5] placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      className="w-full pl-8 pr-3 py-2 text-sm bg-[#1E2070] border border-[#2D3090]/60 rounded text-[#E8E9FF] placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50 transition-colors"
                     />
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function SefazImport({ onImported }) {
                   <select
                     value={ambiente}
                     onChange={e => setAmbiente(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-[#1A1A1A] border border-[#27272A] rounded text-[#F4F4F5] focus:outline-none focus:border-blue-500/50 transition-colors"
+                    className="w-full px-3 py-2 text-sm bg-[#1E2070] border border-[#2D3090]/60 rounded text-[#E8E9FF] focus:outline-none focus:border-blue-500/50 transition-colors"
                   >
                     <option value="homologacao">Homologação (teste)</option>
                     <option value="producao">Produção</option>
@@ -213,11 +213,11 @@ export default function SefazImport({ onImported }) {
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={enviando}
-                className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-[#27272A] hover:border-blue-500/40 text-zinc-300 text-sm rounded-md px-4 py-3 transition-colors disabled:opacity-60"
+                className="w-full inline-flex items-center justify-center gap-2 border border-dashed border-[#2D3090]/60 hover:border-blue-500/40 text-zinc-300 text-sm rounded-md px-4 py-3 transition-colors disabled:opacity-60"
               >
                 {enviando
                   ? <><Loader2 className="h-4 w-4 animate-spin" /> Validando certificado...</>
-                  : <><KeyRound className="h-4 w-4 text-blue-400" /> Selecionar certificado A1 (.pfx / .p12)</>}
+                  : <><KeyRound className="h-4 w-4 text-[#7B84E0]" /> Selecionar certificado A1 (.pfx / .p12)</>}
               </button>
               <input
                 ref={fileRef}
@@ -236,9 +236,9 @@ export default function SefazImport({ onImported }) {
 
 function InfoField({ label, value }) {
   return (
-    <div className="bg-[#1A1A1A] border border-[#27272A] rounded-md px-3 py-2">
+    <div className="bg-[#1E2070] border border-[#2D3090]/60 rounded-md px-3 py-2">
       <p className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="text-sm text-[#F4F4F5] font-mono mt-0.5 truncate">{value || '-'}</p>
+      <p className="text-sm text-[#E8E9FF] font-mono mt-0.5 truncate">{value || '-'}</p>
     </div>
   );
 }

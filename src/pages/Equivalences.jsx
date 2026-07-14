@@ -46,7 +46,7 @@ export default function Equivalences() {
       <div className="flex items-center gap-3">
         <Filter className="h-4 w-4 text-zinc-500" />
         <Select value={filterCnpj} onValueChange={setFilterCnpj}>
-          <SelectTrigger className="w-[300px] bg-[#121212] border-[#27272A] text-[#F4F4F5]" data-testid="filter-fornecedor">
+          <SelectTrigger className="w-[300px] bg-[#121212] border-[#27272A] text-[#F4F4F5]">
             <SelectValue placeholder="Filtrar por fornecedor" />
           </SelectTrigger>
           <SelectContent className="bg-[#121212] border-[#27272A]">

@@ -121,13 +121,13 @@ export default function ProductBinding() {
       <div className="bg-[#121212] border border-[#27272A] rounded-md p-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Produtos Vinculados</span>
-          <span className="font-mono text-lg text-[#F4F4F5] font-bold" data-testid="binding-progress">{total_vinculados} / {total}</span>
+          <span className="font-mono text-lg text-[#F4F4F5] font-bold">{total_vinculados} / {total}</span>
         </div>
         <Progress value={pct} className={`h-4 bg-[#1A1A1A] ${pct === 100 ? '[&>div]:bg-green-500' : '[&>div]:bg-blue-500'}`} />
       </div>
 
       {current ? (
-        <div className="bg-[#121212] border-2 border-yellow-500/40 rounded-lg p-8" data-testid="current-binding-card">
+        <div className="bg-[#121212] border-2 border-yellow-500/40 rounded-lg p-8">
           <div className="flex items-center justify-between mb-6">
             <Badge className="bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
               Produto {currentIndex} de {total} &middot; sem cadastro
@@ -137,23 +137,21 @@ export default function ProductBinding() {
 
           <div className="text-center space-y-4 mb-8">
             <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Codigo da Nota</p>
-            <p className="font-mono text-4xl sm:text-5xl font-bold text-[#F4F4F5]" data-testid="binding-cprod">{current.cprod || '-'}</p>
-            <p className="text-xl sm:text-2xl text-zinc-300" data-testid="binding-descricao">{current.descricao_nfe}</p>
+            <p className="font-mono text-4xl sm:text-5xl font-bold text-[#F4F4F5]">{current.cprod || '-'}</p>
+            <p className="text-xl sm:text-2xl text-zinc-300">{current.descricao_nfe}</p>
             <div className="flex items-center justify-center gap-6 text-zinc-500 font-mono text-sm">
               <span>Qtd: <span className="text-zinc-300">{Number(current.quantidade)} {current.unidade}</span></span>
               {isValidEan(current.ean) && <span>EAN: <span className="text-zinc-300">{current.ean}</span></span>}
             </div>
           </div>
 
-          {/* Suggestions */}
           {current.sugestoes?.length > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
               <span className="text-[10px] uppercase tracking-widest text-zinc-600 flex items-center gap-1">
                 <Brain className="h-3 w-3" /> Sugestoes:
               </span>
               {current.sugestoes.slice(0, 3).map((s, i) => (
-                <button key={i} data-testid={`suggestion-chip-${i}`}
-                  onClick={() => handleCodeChange(s.produto.codigo)}
+                <button key={i} onClick={() => handleCodeChange(s.produto.codigo)}
                   className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-full text-xs font-mono hover:bg-blue-500/20 transition-colors">
                   {s.produto.codigo} &middot; {s.similaridade}%
                 </button>
@@ -161,35 +159,33 @@ export default function ProductBinding() {
             </div>
           )}
 
-          {/* Internal code input */}
           <div className="max-w-xl mx-auto">
             <label className="text-[11px] uppercase tracking-[0.2em] text-blue-400 mb-2 block text-center">Digite o Codigo Interno</label>
-            <input ref={inputRef} data-testid="internal-code-input" value={codeInput}
+            <input ref={inputRef} value={codeInput}
               onChange={e => handleCodeChange(e.target.value)} onKeyDown={handleEnter}
               placeholder="Codigo interno + ENTER"
               autoComplete="off"
               className="w-full text-3xl font-mono text-center p-4 bg-black text-white border-2 border-blue-500/30 rounded-md focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none placeholder:text-zinc-700 placeholder:text-xl transition-all" />
 
             {saving && (
-              <div className="mt-3 p-3 bg-blue-500/5 border border-blue-500/30 rounded-md" data-testid="code-saving">
+              <div className="mt-3 p-3 bg-blue-500/5 border border-blue-500/30 rounded-md">
                 <p className="text-blue-400 text-sm">Processando codigo "{codeInput}"...</p>
               </div>
             )}
           </div>
         </div>
       ) : (
-        <div className="bg-[#121212] border-2 border-green-500/50 rounded-lg p-12 text-center" data-testid="all-bound-card">
+        <div className="bg-[#121212] border-2 border-green-500/50 rounded-lg p-12 text-center">
           <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-400" />
           <h2 className="text-3xl font-bold text-green-400 mb-2">TODOS OS PRODUTOS VINCULADOS!</h2>
           <p className="text-zinc-400 mb-8">Todos os {total} itens da nota possuem codigo interno. Pronto para conferir.</p>
-          <button data-testid="start-conference-button" onClick={handleStartConference}
+          <button onClick={handleStartConference}
             className="inline-flex items-center gap-3 px-8 py-4 bg-green-600 text-white text-xl font-semibold rounded-lg hover:bg-green-500 transition-colors">
             <PlayCircle className="h-7 w-7" /> Iniciar Conferencia
           </button>
         </div>
       )}
 
-      {/* Already bound items */}
       {vinculados.length > 0 && (
         <div className="bg-[#121212] border border-[#27272A] rounded-md p-4">
           <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-3 flex items-center gap-2">

@@ -2,8 +2,6 @@ import sys
 import os
 from pathlib import Path
 
-# Garante que backend/ está no sys.path para que `services.*` seja encontrado
-# tanto ao rodar localmente (uvicorn backend.server:app) quanto no serverless Vercel
 _backend_dir = Path(__file__).parent
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
@@ -30,8 +28,6 @@ from services import auth as auth_svc
 ROOT_DIR = Path(__file__).parent
 PROJECT_ROOT = ROOT_DIR.parent
 
-# Carrega variaveis de ambiente de multiplas fontes (sem sobrescrever as ja definidas):
-# backend/.env (local), e os arquivos .env do projeto (usados pelo v0/Vercel dev).
 load_dotenv(ROOT_DIR / '.env')
 for _env_file in ('.env.development.local', '.env.local', '.env'):
     _p = PROJECT_ROOT / _env_file
@@ -47,7 +43,6 @@ if not mongo_url or not db_name:
         "Configure-os nas variaveis do projeto (Vars) com a connection string do MongoDB Atlas."
     )
 
-# Cliente resiliente: pool de conexoes + timeouts curtos para nao travar requisicoes
 client = AsyncIOMotorClient(
     mongo_url,
     maxPoolSize=50,
@@ -66,12 +61,9 @@ api_router = APIRouter(prefix="/api")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ── Autenticacao (dependencias) ────────────────────────────────────
 _bearer = HTTPBearer(auto_error=False)
 
-
 async def get_current_user(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
-    """Valida o token JWT e retorna o usuario atual do banco."""
     if creds is None:
         raise HTTPException(401, "Nao autenticado")
     try:
@@ -86,18 +78,14 @@ async def get_current_user(creds: HTTPAuthorizationCredentials = Depends(_bearer
         raise HTTPException(403, "Usuario desativado")
     return user
 
-
 def require_permission(permission: str):
-    """Cria uma dependencia que exige uma permissao especifica."""
     async def _dep(user: dict = Depends(get_current_user)) -> dict:
         if not auth_svc.role_has_permission(user.get('role', ''), permission):
             raise HTTPException(403, "Voce nao tem permissao para esta acao")
         return user
     return _dep
 
-
 def _user_public(user: dict) -> dict:
-    """Serializa um usuario sem expor o hash da senha."""
     role = user.get('role', '')
     return {
         'id': str(user['_id']),
@@ -110,12 +98,9 @@ def _user_public(user: dict) -> dict:
         'created_at': user.get('created_at'),
     }
 
-
-# ── Modelos de autenticacao ────────────────────────────────────────
 class LoginInput(BaseModel):
     username: str
     password: str
-
 
 class UserCreateInput(BaseModel):
     username: str
@@ -123,15 +108,12 @@ class UserCreateInput(BaseModel):
     nome: str
     role: str
 
-
 class UserUpdateInput(BaseModel):
     nome: Optional[str] = None
     role: Optional[str] = None
     ativo: Optional[bool] = None
     password: Optional[str] = None
 
-
-# ── API: Autenticacao ──────────────────────────────────────────────
 @api_router.post("/auth/login")
 async def login(data: LoginInput):
     user = await db.usuarios.find_one({'username': data.username.lower().strip()})
@@ -142,18 +124,14 @@ async def login(data: LoginInput):
     token = auth_svc.create_token(str(user['_id']), user['username'], user.get('role', ''))
     return {'token': token, 'user': _user_public(user)}
 
-
 @api_router.get("/auth/me")
 async def get_me(user: dict = Depends(get_current_user)):
     return _user_public(user)
 
-
-# ── API: Gestao de usuarios (somente admin) ────────────────────────
 @api_router.get("/usuarios")
 async def list_usuarios(_: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
     users = await db.usuarios.find().sort('created_at', -1).to_list(500)
     return [_user_public(u) for u in users]
-
 
 @api_router.post("/usuarios")
 async def create_usuario(data: UserCreateInput, _: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
@@ -178,7 +156,6 @@ async def create_usuario(data: UserCreateInput, _: dict = Depends(require_permis
     doc['_id'] = result.inserted_id
     return _user_public(doc)
 
-
 @api_router.put("/usuarios/{user_id}")
 async def update_usuario(user_id: str, data: UserUpdateInput, admin: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
     user = await db.usuarios.find_one({'_id': ObjectId(user_id)})
@@ -193,7 +170,6 @@ async def update_usuario(user_id: str, data: UserUpdateInput, admin: dict = Depe
             raise HTTPException(400, "Papel invalido")
         updates['role'] = data.role
     if data.ativo is not None:
-        # Nao permite o admin desativar a si mesmo
         if str(user['_id']) == str(admin['_id']) and not data.ativo:
             raise HTTPException(400, "Voce nao pode desativar a si mesmo")
         updates['ativo'] = data.ativo
@@ -207,7 +183,6 @@ async def update_usuario(user_id: str, data: UserUpdateInput, admin: dict = Depe
     updated = await db.usuarios.find_one({'_id': ObjectId(user_id)})
     return _user_public(updated)
 
-
 @api_router.delete("/usuarios/{user_id}")
 async def delete_usuario(user_id: str, admin: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
     if str(user_id) == str(admin['_id']):
@@ -217,13 +192,10 @@ async def delete_usuario(user_id: str, admin: dict = Depends(require_permission(
         raise HTTPException(404, "Usuario nao encontrado")
     return {'ok': True}
 
-
 @api_router.get("/roles")
 async def list_roles(_: dict = Depends(get_current_user)):
-    """Lista os papeis disponiveis (para preencher formularios)."""
     return [{'value': r, 'label': auth_svc.ROLE_LABELS[r]} for r in auth_svc.ROLES]
 
-# ── PyObjectId & BaseDocument ──────────────────────────────────────
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
 class BaseDocument(BaseModel):
@@ -245,7 +217,6 @@ class BaseDocument(BaseModel):
             data.pop('_id', None)
         return data
 
-# ── Models ─────────────────────────────────────────────────────────
 class Produto(BaseDocument):
     codigo: str
     descricao: str
@@ -361,19 +332,13 @@ class HistoricoLeitura(BaseDocument):
     resultado: str
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
-
-
-# ── Matching wrapper (injects db + Produto model) ─────────────────
 async def match_product(item_desc, item_ean, item_cprod, fornecedor_cnpj, quantidade=0, _cache=None):
     return await _match_product(db, Produto, item_desc, item_ean, item_cprod, fornecedor_cnpj, quantidade, _cache)
 
-# ── Learning Service ───────────────────────────────────────────────
 async def save_learning(item, produto, nota, metodo='manual', confianca=100.0):
-    """Save learning data whenever a binding is confirmed."""
     if not nota or not nota.fornecedor_cnpj:
         return
 
-    # Save to historico_aprendizado
     hist = HistoricoAprendizado(
         fornecedor_cnpj=nota.fornecedor_cnpj,
         fornecedor_nome=nota.fornecedor_nome or '',
@@ -389,7 +354,6 @@ async def save_learning(item, produto, nota, metodo='manual', confianca=100.0):
     )
     await db.historico_aprendizado.insert_one(hist.to_mongo())
 
-    # Upsert equivalencia
     existing_eq = await db.equivalencia_produtos.find_one({
         'fornecedor_cnpj': nota.fornecedor_cnpj, 'codigo_fornecedor': item.cprod
     })
@@ -420,16 +384,13 @@ async def save_learning(item, produto, nota, metodo='manual', confianca=100.0):
         )
         await db.equivalencia_produtos.insert_one(eq.to_mongo())
 
-    # Update product EAN if missing
     if item.ean and not produto.ean:
         await db.produtos.update_one({'_id': ObjectId(produto.id)}, {'$set': {'ean': item.ean}})
 
-# ── API: Health ────────────────────────────────────────────────────
 @api_router.get("/")
 async def root():
     return {"message": "NF-e Conference System API"}
 
-# ── API: Produtos ──────────────────────────────────────────────────
 @api_router.get("/produtos")
 async def list_produtos(search: Optional[str] = None, _: dict = Depends(get_current_user)):
     query = {'ativo': True}
@@ -444,7 +405,6 @@ async def list_produtos(search: Optional[str] = None, _: dict = Depends(get_curr
 
 @api_router.get("/produtos/exportar-excel")
 async def exportar_produtos_excel(_: dict = Depends(get_current_user)):
-    """Export all active products to an Excel spreadsheet (cod interno, descricao, EAN)."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
@@ -469,7 +429,6 @@ async def exportar_produtos_excel(_: dict = Depends(get_current_user)):
         ws.cell(row=row, column=2, value=d.get('descricao', ''))
         ws.cell(row=row, column=3, value=d.get('ean') or '')
 
-    # Auto column widths
     for col in range(1, 4):
         max_len = len(headers[col - 1])
         for row in range(2, len(docs) + 2):
@@ -512,7 +471,6 @@ async def delete_produto(produto_id: str, _: dict = Depends(require_permission(a
     await db.produtos.update_one({'_id': ObjectId(produto_id)}, {'$set': {'ativo': False}})
     return {"ok": True}
 
-# ── API: Fornecedores ──────────────────────────────────────────────
 @api_router.get("/fornecedores")
 async def list_fornecedores(search: Optional[str] = None, _: dict = Depends(get_current_user)):
     query = {'ativo': True}
@@ -544,7 +502,6 @@ async def delete_fornecedor(fornecedor_id: str, _: dict = Depends(require_permis
     await db.fornecedores.update_one({'_id': ObjectId(fornecedor_id)}, {'$set': {'ativo': False}})
     return {"ok": True}
 
-# ── API: Notas ─────────────────────────────────────────────────────
 @api_router.get("/notas")
 async def list_notas(status: Optional[str] = None, _: dict = Depends(get_current_user)):
     query = {}
@@ -563,12 +520,6 @@ async def get_nota(nota_id: str, _: dict = Depends(get_current_user)):
     return {'nota': nota.model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items]}
 
 async def _importar_nfe_from_content(content, *, ignorar_duplicada=False):
-    """Faz o parse de um XML de NF-e e importa a nota + itens no banco.
-
-    Reutilizado tanto pelo upload manual quanto pela busca no SEFAZ.
-    Retorna dict com 'nota' e 'itens', ou {'duplicada': True, 'chave': ...}
-    quando a nota ja existe e ignorar_duplicada=True.
-    """
     header, items = parse_nfe_xml(content)
 
     if header.get('chave'):
@@ -622,7 +573,6 @@ async def _importar_nfe_from_content(content, *, ignorar_duplicada=False):
     items_docs = await db.itens_nota.find({'nota_id': nota_id}).to_list(1000)
     return {'nota': Nota.from_mongo(nota_doc).model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items_docs]}
 
-
 @api_router.post("/notas/importar-xml")
 async def importar_xml(file: UploadFile = File(...), _: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
     content = await file.read()
@@ -641,26 +591,17 @@ async def delete_nota(nota_id: str, _: dict = Depends(require_permission(auth_sv
     await db.historico_leituras.delete_many({'nota_id': nota_id})
     return {"ok": True}
 
-# ── API: SEFAZ (Distribuicao DF-e) ─────────────────────────────────
-# Guarda o certificado A1 do usuario (uma unica config global).
-# NOTA DE SEGURANCA: em producao, prefira armazenar o .pfx em um cofre de
-# segredos (ex.: Vault) em vez do banco. Aqui guardamos em base64 para o fluxo
-# funcionar de ponta a ponta.
 CERT_CONFIG_ID = "sefaz_cert"
-
 
 class SefazBuscaInput(BaseModel):
     ultimo_nsu: str = "0"
     max_lotes: int = 5  # ate 5 lotes por acionamento (evita loop infinito)
 
-
 async def _get_cert_config():
     return await db.config.find_one({"_id": CERT_CONFIG_ID})
 
-
 @api_router.get("/sefaz/certificado")
 async def get_certificado_status(_: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
-    """Retorna se ha um certificado configurado (sem expor o arquivo/senha)."""
     cfg = await _get_cert_config()
     if not cfg:
         return {"configurado": False}
@@ -673,7 +614,6 @@ async def get_certificado_status(_: dict = Depends(require_permission(auth_svc.P
         "ultimo_nsu": cfg.get("ultimo_nsu", "0"),
     }
 
-
 @api_router.post("/sefaz/certificado")
 async def upload_certificado(
     file: UploadFile = File(...),
@@ -681,7 +621,6 @@ async def upload_certificado(
     ambiente: str = Query("homologacao"),
     _: dict = Depends(require_permission(auth_svc.PERM_NOTAS)),
 ):
-    """Recebe o A1 (.pfx/.p12) + senha, valida e guarda a configuracao."""
     pfx_bytes = await file.read()
     try:
         info = sefaz.validar_certificado(pfx_bytes, senha)
@@ -711,16 +650,13 @@ async def upload_certificado(
         "ambiente": ambiente,
     }
 
-
 @api_router.delete("/sefaz/certificado")
 async def delete_certificado(_: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
     await db.config.delete_one({"_id": CERT_CONFIG_ID})
     return {"ok": True}
 
-
 @api_router.post("/sefaz/buscar")
 async def buscar_notas_sefaz(data: SefazBuscaInput, _: dict = Depends(require_permission(auth_svc.PERM_NOTAS))):
-    """Consulta a Distribuicao DF-e e importa automaticamente as NF-e novas."""
     cfg = await _get_cert_config()
     if not cfg:
         raise HTTPException(400, "Nenhum certificado A1 configurado. Envie o certificado primeiro.")
@@ -748,7 +684,6 @@ async def buscar_notas_sefaz(data: SefazBuscaInput, _: dict = Depends(require_pe
         ultima_resposta = resp
         c_stat = resp.get("cStat")
 
-        # 138 = documentos localizados; 137 = nenhum documento localizado
         completas = sefaz.extrair_nfe_procs(resp.get("docs", []))
         resumos += len(resp.get("docs", [])) - len(completas)
 
@@ -772,12 +707,10 @@ async def buscar_notas_sefaz(data: SefazBuscaInput, _: dict = Depends(require_pe
         maxn = resp.get("maxNSU", "0")
         ultimo_nsu = ult
 
-        # Persiste o avanco do NSU para nao reprocessar
         await db.config.update_one(
             {"_id": CERT_CONFIG_ID}, {"$set": {"ultimo_nsu": ultimo_nsu}}
         )
 
-        # Sem mais documentos ou cStat != 138 -> para
         if c_stat != "138":
             break
         try:
@@ -798,14 +731,12 @@ async def buscar_notas_sefaz(data: SefazBuscaInput, _: dict = Depends(require_pe
         "lotes_consultados": lotes,
     }
 
-# ── API: Conferencia ───────────────────────────────────────────────
 @api_router.post("/conferencias/iniciar/{nota_id}")
 async def iniciar_conferencia(nota_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
     doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not doc:
         raise HTTPException(404, "Nota nao encontrada")
 
-    # Block if any item has no binding
     pending = await db.itens_nota.count_documents({'nota_id': nota_id, 'produto_interno_id': None, 'ignorado': {'$ne': True}})
     if pending > 0:
         raise HTTPException(400, f"Existem {pending} produto(s) sem vinculo. Complete a vinculacao antes de iniciar a conferencia.")
@@ -819,19 +750,15 @@ async def iniciar_conferencia(nota_id: str, _: dict = Depends(require_permission
     items = await db.itens_nota.find({'nota_id': nota_id}).to_list(1000)
     return {'nota': Nota.from_mongo(nota_doc).model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items]}
 
-# ── API: Quick Product Lookup ──────────────────────────────────────
 @api_router.get("/produtos/buscar-codigo/{codigo}")
 async def buscar_produto_por_codigo(codigo: str, _: dict = Depends(get_current_user)):
-    """Quick lookup by internal code - for ENTER shortcut in binding screen."""
     prod = await db.produtos.find_one({'codigo': codigo, 'ativo': True})
     if not prod:
         raise HTTPException(404, "Produto nao encontrado com esse codigo")
     return Produto.from_mongo(prod).model_dump()
 
-# ── API: Vinculacao (per-nota binding) ─────────────────────────────
 @api_router.get("/vinculacao/{nota_id}")
 async def get_vinculacao(nota_id: str, _: dict = Depends(get_current_user)):
-    """Get nota info and items needing binding."""
     nota_doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not nota_doc:
         raise HTTPException(404, "Nota nao encontrada")
@@ -872,15 +799,12 @@ async def _nota_progress(nota_id: str):
 
 @api_router.post("/conferencias/leitura")
 async def processar_leitura(data: LeituraInput, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
-    """Game-mode scan: each beep = 1 unit. Free order (scan opens the item).
-    If an item is active, only its EAN counts; other codes return 'produto_errado'."""
     nota = await db.notas.find_one({'_id': ObjectId(data.nota_id)})
     if not nota:
         raise HTTPException(404, "Nota nao encontrada")
 
     codigo = data.codigo_barras.strip()
 
-    # Resolve candidate items in this nota: by nota EAN, then by internal product EAN/code
     candidates = await db.itens_nota.find({'nota_id': data.nota_id, 'ean': codigo}).to_list(100)
     produto = await db.produtos.find_one({'ean': codigo, 'ativo': True})
     if not produto:
@@ -905,7 +829,6 @@ async def processar_leitura(data: LeituraInput, _: dict = Depends(require_permis
         return {'success': False, 'tipo': 'desconhecido', 'message': 'Codigo nao encontrado nesta nota.',
                 'scanned': {'codigo': codigo}, 'item': None, 'progress': progress}
 
-    # Determine target item
     item_doc = None
     if data.item_ativo_id:
         for c in candidates:
@@ -931,14 +854,12 @@ async def processar_leitura(data: LeituraInput, _: dict = Depends(require_permis
 
     item_obj = ItemNota.from_mongo(item_doc)
 
-    # Already fully counted
     if item_obj.quantidade_conferida >= item_obj.quantidade:
         hist = HistoricoLeitura(nota_id=data.nota_id, codigo_barras=codigo, item_nota_id=item_obj.id, resultado='ja_conferido')
         await db.historico_leituras.insert_one(hist.to_mongo())
         return {'success': False, 'tipo': 'ja_conferido', 'message': 'Este item ja foi conferido!',
                 'item': _item_game_payload(item_doc), 'progress': progress}
 
-    # Count +1
     new_qty = item_obj.quantidade_conferida + 1
     completed = new_qty >= item_obj.quantidade
     status = 'conferido' if completed else 'em_contagem'
@@ -973,7 +894,6 @@ async def confirmar_vinculo(data: ConfirmarVinculoInput, _: dict = Depends(requi
     if not item_doc:
         raise HTTPException(404, "Item nao encontrado")
 
-    # Resolve product by ID or by internal code
     produto_doc = None
     if data.produto_interno_id:
         produto_doc = await db.produtos.find_one({'_id': ObjectId(data.produto_interno_id)})
@@ -1001,7 +921,6 @@ async def confirmar_vinculo(data: ConfirmarVinculoInput, _: dict = Depends(requi
         }}
     )
 
-    # Save learning
     await save_learning(item, produto, nota, metodo=origem, confianca=100)
 
     items = await db.itens_nota.find({'nota_id': item.nota_id}).to_list(1000)
@@ -1019,7 +938,6 @@ class FinalizarInput(BaseModel):
     operador: Optional[str] = None
 
 class ConfirmarLoteInput(BaseModel):
-    """Bulk binding confirmation."""
     vinculos: List[ConfirmarVinculoInput]
 
 @api_router.post("/conferencias/justificativa")
@@ -1034,7 +952,6 @@ async def salvar_justificativa(data: JustificativaInput, _: dict = Depends(requi
 
 @api_router.post("/conferencias/confirmar-lote")
 async def confirmar_vinculo_lote(data: ConfirmarLoteInput, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
-    """Bulk confirm multiple bindings at once."""
     confirmados = 0
     erros = []
     for v in data.vinculos:
@@ -1063,7 +980,6 @@ async def finalizar_conferencia(nota_id: str, data: Optional[FinalizarInput] = N
 
 @api_router.get("/conferencias/relatorio/{nota_id}")
 async def relatorio_conferencia(nota_id: str, _: dict = Depends(get_current_user)):
-    """Detailed conference report data for A4 printing."""
     nota_doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not nota_doc:
         raise HTTPException(404, "Nota nao encontrada")
@@ -1100,7 +1016,6 @@ async def relatorio_conferencia(nota_id: str, _: dict = Depends(get_current_user
             'justificativa': i.get('justificativa_divergencia'),
         })
 
-    # Duration
     duracao_min = None
     if nota.get('conferencia_inicio') and nota.get('conferencia_fim'):
         try:
@@ -1129,12 +1044,10 @@ async def relatorio_conferencia(nota_id: str, _: dict = Depends(get_current_user
 
 @api_router.post("/conferencias/relatorio/{nota_id}/salvar")
 async def salvar_relatorio(nota_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
-    """Salva o snapshot do relatorio de conferencia dentro do documento da nota."""
     nota_doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     if not nota_doc:
         raise HTTPException(404, "Nota nao encontrada")
 
-    # Reutiliza a mesma logica do relatorio para gerar o snapshot
     nota = Nota.from_mongo(nota_doc).model_dump()
     items_docs = await db.itens_nota.find({'nota_id': nota_id}).sort('numero_item', 1).to_list(1000)
     itens = []
@@ -1186,10 +1099,8 @@ async def salvar_relatorio(nota_id: str, _: dict = Depends(require_permission(au
     await db.notas.update_one({'_id': ObjectId(nota_id)}, {'$set': {'relatorio_salvo': snapshot}})
     return {'ok': True, 'salvo_em': snapshot['salvo_em']}
 
-# ── API: Recognition Center ────────────────────────────────────────
 @api_router.get("/reconhecimento")
 async def list_reconhecimento(fornecedor_cnpj: Optional[str] = None, _: dict = Depends(get_current_user)):
-    """List all items without binding (pending recognition)."""
     query = {'produto_interno_id': None, 'ignorado': {'$ne': True}}
     if fornecedor_cnpj:
         nota_ids = []
@@ -1220,12 +1131,10 @@ async def list_reconhecimento(fornecedor_cnpj: Optional[str] = None, _: dict = D
 
 @api_router.post("/reconhecimento/confirmar")
 async def confirmar_reconhecimento(data: ConfirmarVinculoInput, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
-    """Confirm binding from Recognition Center - same as conference confirmar-vinculo."""
     return await confirmar_vinculo(data)
 
 @api_router.post("/reconhecimento/ignorar/{item_id}")
 async def ignorar_reconhecimento(item_id: str, _: dict = Depends(require_permission(auth_svc.PERM_CADASTROS))):
-    """Mark item as ignored in recognition center."""
     result = await db.itens_nota.update_one(
         {'_id': ObjectId(item_id)},
         {'$set': {'ignorado': True}}
@@ -1234,7 +1143,6 @@ async def ignorar_reconhecimento(item_id: str, _: dict = Depends(require_permiss
         raise HTTPException(404, "Item nao encontrado")
     return {"ok": True}
 
-# ����� API: Equivalencias ─────────────────────────────────────────────
 @api_router.get("/equivalencias")
 async def list_equivalencias(fornecedor_cnpj: Optional[str] = None, _: dict = Depends(get_current_user)):
     query = {}
@@ -1248,13 +1156,11 @@ async def delete_equivalencia(eq_id: str, _: dict = Depends(require_permission(a
     await db.equivalencia_produtos.delete_one({'_id': ObjectId(eq_id)})
     return {"ok": True}
 
-# ── API: Historico de Aprendizado ──────────────────────────────────
 @api_router.get("/historico-aprendizado")
 async def list_historico_aprendizado(limit: int = 50, _: dict = Depends(get_current_user)):
     docs = await db.historico_aprendizado.find().sort('created_at', -1).to_list(limit)
     return [HistoricoAprendizado.from_mongo(d).model_dump() for d in docs]
 
-# ── API: Dashboard Inteligente ─────────────────────────────────────
 @api_router.get("/dashboard")
 async def dashboard(_: dict = Depends(get_current_user)):
     today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc).isoformat()
@@ -1281,7 +1187,6 @@ async def dashboard(_: dict = Depends(get_current_user)):
     sem_vinculo = await db.itens_nota.count_documents({'produto_interno_id': None, 'ignorado': {'$ne': True}})
     total_matched = await db.itens_nota.count_documents({'produto_interno_id': {'$ne': None}})
 
-    # Recognition stats by method
     by_ean = await db.itens_nota.count_documents({'metodo_identificacao': 'ean'})
     by_vinculo = await db.itens_nota.count_documents({'metodo_identificacao': 'vinculo'})
     by_similaridade = await db.itens_nota.count_documents({'metodo_identificacao': {'$in': ['similaridade', 'vinculo_aprendido']}})
@@ -1296,8 +1201,6 @@ async def dashboard(_: dict = Depends(get_current_user)):
     pipeline = [{'$group': {'_id': '$fornecedor_nome', 'count': {'$sum': 1}}}, {'$sort': {'count': -1}}, {'$limit': 5}]
     top_fornecedores = await db.notas.aggregate(pipeline).to_list(5)
 
-    # Suppliers with highest error rates (most unmatched items) — single aggregation
-    # replaces the previous O(N) loop that fired 2 count_documents per nota.
     fornecedor_errors = []
     error_pipeline = [
         {'$lookup': {
@@ -1355,7 +1258,6 @@ async def dashboard(_: dict = Depends(get_current_user)):
         'total_itens': total_itens, 'total_matched': total_matched,
     }
 
-# ── API: Seed Data ─────────────────────────────────────────────────
 @api_router.post("/seed")
 async def seed_data(_: dict = Depends(require_permission(auth_svc.PERM_USUARIOS))):
     await db.produtos.delete_many({})
@@ -1387,7 +1289,6 @@ async def seed_data(_: dict = Depends(require_permission(auth_svc.PERM_USUARIOS)
         {"codigo": "10018", "descricao": "BUCHA BANDEJA GOL G5", "ean": "7891234567018", "unidade": "UN", "preco": 29.90, "categoria": "Suspensao"},
         {"codigo": "10019", "descricao": "BOMBA DAGUA GOL 1.0", "ean": "7891234567019", "unidade": "UN", "preco": 89.90, "categoria": "Motor"},
         {"codigo": "10020", "descricao": "JUNTA CABECOTE GOL 1.0", "ean": "7891234567020", "unidade": "UN", "preco": 159.90, "categoria": "Motor"},
-        # Heavy truck parts (matching NF-e items from BR COMPANY)
         {"codigo": "20001", "descricao": "BUJAO CARTER COM IMA 26MM", "ean": None, "unidade": "PC", "preco": 6.50, "categoria": "Motor"},
         {"codigo": "20002", "descricao": "CAPA COLUNA DIRECAO MERCEDES", "ean": None, "unidade": "PC", "preco": 42.00, "categoria": "Direcao"},
         {"codigo": "20003", "descricao": "TERMINAL ACELERADOR COMPLETO 6X1", "ean": None, "unidade": "PC", "preco": 9.50, "categoria": "Motor"},
@@ -1455,10 +1356,8 @@ async def get_sample_xml():
 </nfeProc>'''
     return {"xml": xml}
 
-# ── App Config ─────────────────────────────────────────────────────
 @api_router.get("/health")
 async def health():
-    """Verifica conectividade com o MongoDB."""
     try:
         await client.admin.command("ping")
         return {"status": "ok", "database": "connected"}
@@ -1468,7 +1367,6 @@ async def health():
             status_code=503,
             content={"status": "error", "database": "disconnected", "detail": str(e)},
         )
-
 
 app.include_router(api_router)
 
@@ -1482,8 +1380,6 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    # Nao deixa a criacao de indices derrubar o boot do servidor caso o
-    # banco esteja momentaneamente indisponivel.
     try:
         await client.admin.command("ping")
         await asyncio.gather(
@@ -1507,7 +1403,6 @@ async def startup():
             db.historico_aprendizado.create_index("created_at"),
             db.usuarios.create_index("username", unique=True),
         )
-        # Seed do admin inicial (admin/admin) caso nao exista nenhum usuario
         if await db.usuarios.count_documents({}) == 0:
             await db.usuarios.insert_one({
                 'username': 'admin',

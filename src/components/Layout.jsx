@@ -73,7 +73,6 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex h-screen bg-[#0A0A0A]">
-      {/* Sidebar - desktop (md+) */}
       <aside className={`${collapsed ? 'w-16' : 'w-56'} hidden md:flex bg-[#121212] border-r border-[#27272A] flex-col transition-all duration-150 flex-shrink-0`}>
         <div className="p-4 flex items-center justify-between border-b border-[#27272A] min-h-[56px]">
           {!collapsed && <h1 className="font-heading text-lg font-semibold text-[#F4F4F5] tracking-tight whitespace-nowrap">NF-e Check</h1>}
@@ -85,7 +84,6 @@ export default function Layout({ children }) {
         <UserFooter showLabels={!collapsed} />
       </aside>
 
-      {/* Sidebar - mobile (off-canvas drawer) */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} aria-hidden="true" />
@@ -103,7 +101,6 @@ export default function Layout({ children }) {
       )}
 
       <main className="flex-1 overflow-auto">
-        {/* Top bar - mobile only */}
         <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 bg-[#121212] border-b border-[#27272A] px-4 py-3">
           <button onClick={() => setMobileOpen(true)} className="p-1.5 hover:bg-[#1A1A1A] rounded transition-colors" aria-label="Abrir menu">
             <Menu className="h-5 w-5 text-[#F4F4F5]" />

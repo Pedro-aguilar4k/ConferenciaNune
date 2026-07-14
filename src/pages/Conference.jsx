@@ -364,7 +364,6 @@ function ConferenceGame({ notaId }) {
         })}
       </div>
 
-      {/* Finalize dialog - ask operator name */}
       <Dialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
         <DialogContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5] max-w-md">
           <DialogHeader>
@@ -375,7 +374,7 @@ function ConferenceGame({ notaId }) {
           </DialogHeader>
           <div>
             <label className="text-[11px] uppercase tracking-[0.15em] text-blue-400 mb-2 block">Nome do Estoquista</label>
-            <input data-testid="operador-nome-input" value={operadorNome} autoFocus
+            <input value={operadorNome} autoFocus
               onChange={e => setOperadorNome(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && operadorNome.trim()) handleConfirmFinalize(); }}
               placeholder="Digite seu nome..."
@@ -384,7 +383,7 @@ function ConferenceGame({ notaId }) {
           <div className="flex justify-end gap-2 mt-2">
             <button onClick={() => setFinalizeDialogOpen(false)}
               className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors">Cancelar</button>
-            <button data-testid="confirm-finalize-button" onClick={handleConfirmFinalize} disabled={!operadorNome.trim()}
+            <button onClick={handleConfirmFinalize} disabled={!operadorNome.trim()}
               className="px-5 py-2 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-500 disabled:opacity-50 transition-colors">
               Finalizar e Gerar Relatorio
             </button>

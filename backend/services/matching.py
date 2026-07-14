@@ -1,10 +1,7 @@
-"""Matching engine: normalization, similarity and multi-criteria product matching."""
-
 import re
 import unicodedata
 from difflib import SequenceMatcher
 
-# ── Abbreviation dictionary ────────────────────────────────────────────────────
 ABBREVIATIONS = {
     'AMORT.': 'AMORTECEDOR', 'AMORT': 'AMORTECEDOR',
     'DT': 'DIANTEIRO', 'DIANT.': 'DIANTEIRO', 'DIANT': 'DIANTEIRO',
@@ -50,15 +47,7 @@ STOP_WORDS = {
 }
 
 
-# ── Text normalization ─────────────────────────────────────────────────────────
-
 def strip_manufacturer_code(text: str) -> str:
-    """Strip manufacturer code prefix from NF-e descriptions.
-
-    Examples:
-        '403 997 02 30 - BUJAO CARTER...' → 'BUJAO CARTER...'
-        '2T2145299A - ESTICADOR...'       → 'ESTICADOR...'
-    """
     if not text:
         return text
     match = re.match(r'^[A-Za-z0-9][A-Za-z0-9\s\.\/]{2,30}?\s*[-]\s+(.+)$', text.strip())
@@ -68,7 +57,6 @@ def strip_manufacturer_code(text: str) -> str:
 
 
 def normalize_text(text: str) -> str:
-    """Remove accents, uppercase, expand abbreviations, remove stop words."""
     if not text:
         return ""
     text = strip_manufacturer_code(text)
@@ -81,10 +69,7 @@ def normalize_text(text: str) -> str:
     return ' '.join(words)
 
 
-# ── Similarity ─────────────────────────────────────────────────────────────────
-
 def calculate_similarity(text1: str, text2: str) -> float:
-    """Combined sequence + token similarity (0–100)."""
     if not text1 or not text2:
         return 0.0
     seq_ratio = SequenceMatcher(None, text1, text2).ratio() * 100
@@ -97,10 +82,6 @@ def calculate_similarity(text1: str, text2: str) -> float:
 
 
 def extract_manufacturer_code(text: str):
-    """Extract manufacturer/part code from the beginning of a description.
-
-    Patterns: '403 997 02 30 - BUJAO...', '2T2145299A - ESTICADOR...', 'BG1X9K614AA - TOMADA AR'
-    """
     if not text:
         return None
     text = text.strip()
@@ -113,25 +94,10 @@ def extract_manufacturer_code(text: str):
     return None
 
 
-# ── Matching engine ────────────────────────────────────────────────────────────
-
 async def match_product(db, Produto, item_desc: str, item_ean, item_cprod: str,
                         fornecedor_cnpj: str, quantidade: float = 0, _cache=None):
-    """Multi-criteria intelligent matching engine with weighted scoring.
-
-    Parameters
-    ----------
-    db:
-        AsyncIOMotorDatabase instance (injected to keep this module DB-agnostic).
-    Produto:
-        The Pydantic model class used to deserialise product documents.
-    _cache:
-        Optional dict shared across items of the same NF-e to avoid N×M queries
-        (products list, supplier bindings, supplier nota count).
-    """
     from datetime import datetime, timezone
 
-    # ── Criterion 1: EAN exact match → weight 100 ─────────────────────────────
     if item_ean and item_ean not in ('SEM GTIN', '', 'None', '0'):
         product = await db.produtos.find_one({'ean': item_ean, 'ativo': True})
         if product:
@@ -144,7 +110,6 @@ async def match_product(db, Produto, item_desc: str, item_ean, item_cprod: str,
                 'criterios': [{'criterio': 'EAN Identico', 'peso': 100}],
             }
 
-    # ── Criterion 2: Supplier + cProd binding → weight 95-99 ──────────────────
     if fornecedor_cnpj and item_cprod:
         binding = await db.equivalencia_produtos.find_one({
             'fornecedor_cnpj': fornecedor_cnpj, 'codigo_fornecedor': item_cprod
@@ -176,7 +141,6 @@ async def match_product(db, Produto, item_desc: str, item_ean, item_cprod: str,
                     'criterios': [{'criterio': 'Vinculo Fornecedor+Codigo', 'peso': score}],
                 }
 
-    # ── Multi-criteria scoring ─────────────────────────────────────────────────
     if _cache is not None and 'all_products' in _cache:
         all_products = _cache['all_products']
     else:
@@ -187,7 +151,6 @@ async def match_product(db, Produto, item_desc: str, item_ean, item_cprod: str,
     normalized_desc = normalize_text(item_desc)
     mfg_code = extract_manufacturer_code(item_desc)
 
-    # Pre-fetch supplier bindings for bonus calculation
     if _cache is not None and 'binding_codes' in _cache:
         existing_binding_codes = _cache['binding_codes']
     else:
@@ -200,7 +163,6 @@ async def match_product(db, Produto, item_desc: str, item_ean, item_cprod: str,
         if _cache is not None:
             _cache['binding_codes'] = existing_binding_codes
 
-    # Check if supplier is recurring
     if _cache is not None and 'supplier_nota_count' in _cache:
         supplier_nota_count = _cache['supplier_nota_count']
     else:
@@ -210,7 +172,6 @@ async def match_product(db, Produto, item_desc: str, item_ean, item_cprod: str,
         if _cache is not None:
             _cache['supplier_nota_count'] = supplier_nota_count
 
-    # Pre-fetch similar-quantity codes (single query instead of one per candidate)
     similar_qty_codes = set()
     if quantidade > 0 and item_cprod:
         qty_min = quantidade * 0.8
@@ -233,21 +194,18 @@ async def match_product(db, Produto, item_desc: str, item_ean, item_cprod: str,
         best_score = 0
         criterios = []
 
-        # Criterion 3: Manufacturer code match → weight 90
         if mfg_code:
             prod_mfg_code = extract_manufacturer_code(p.descricao)
             if prod_mfg_code and mfg_code == prod_mfg_code:
                 best_score = 90
                 criterios.append({'criterio': 'Codigo Fabricante', 'peso': 90})
 
-        # Criterion 4: Description similarity → variable weight
         sim = calculate_similarity(normalized_desc, normalize_text(p.descricao))
         if sim > best_score:
             best_score = sim
         if sim >= 30:
             criterios.append({'criterio': 'Similaridade', 'peso': round(sim, 1)})
 
-        # Bonuses
         if p.codigo in existing_binding_codes:
             best_score += 5
             criterios.append({'criterio': 'Vinculo Anterior', 'peso': 5, 'bonus': True})

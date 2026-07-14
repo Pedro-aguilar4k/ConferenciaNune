@@ -80,7 +80,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Intelligent Recognition Engine */}
       <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
         <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4 flex items-center gap-2">
           <Brain className="h-3.5 w-3.5 text-blue-400" />
@@ -117,7 +116,6 @@ export default function Dashboard() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Recognition by Method */}
         <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Reconhecimento por Metodo</h3>
           {methodData.length > 0 ? (
@@ -152,7 +150,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Notes per day chart */}
         <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Notas por Dia (Ultimos 7 dias)</h3>
           <ResponsiveContainer width="100%" height={180}>
@@ -168,7 +165,6 @@ export default function Dashboard() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Top Suppliers */}
         <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Top Fornecedores por Volume</h3>
           {data.top_fornecedores.length > 0 ? (
@@ -186,7 +182,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Supplier Error Rates */}
         <div className="bg-[#121212] border border-[#27272A] rounded-md p-5">
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Fornecedores - Taxa de Erro</h3>
           {data.fornecedor_errors?.length > 0 ? (

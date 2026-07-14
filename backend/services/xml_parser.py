@@ -1,28 +1,9 @@
-"""NF-e XML parser — extracts header and item list from a NF-e 4.00 XML file."""
-
 import re
 import xml.etree.ElementTree as ET
 
 NFE_NS = 'http://www.portalfiscal.inf.br/nfe'
 
-
 def parse_nfe_xml(xml_content: bytes | str) -> tuple[dict, list[dict]]:
-    """Parse a NF-e XML and return ``(header, items)``.
-
-    Parameters
-    ----------
-    xml_content:
-        Raw bytes or str of the NF-e XML file.
-
-    Returns
-    -------
-    header: dict
-        Keys: chave, numero, serie, data_emissao, fornecedor_cnpj,
-              fornecedor_nome, valor_total.
-    items: list[dict]
-        Each item has: numero_item, cprod, ean, descricao_nfe, ncm, cfop,
-        quantidade, unidade, valor_unitario, valor_total.
-    """
     if isinstance(xml_content, bytes):
         xml_str = xml_content.decode('utf-8', errors='replace')
     else:

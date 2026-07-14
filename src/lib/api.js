@@ -1,7 +1,3 @@
-// Base da API. Em desenvolvimento o Vite faz proxy de "/api" para o backend
-// (ver vite.config.js). Em producao, defina VITE_BACKEND_URL para apontar
-// para o backend implantado. Usa import.meta.env (padrao do Vite) em vez de
-// process.env, que nao existe no browser.
 import axios from "axios";
 
 const backendUrl = import.meta.env?.VITE_BACKEND_URL;
@@ -27,7 +23,6 @@ export function setToken(token) {
   }
 }
 
-// Anexa o token JWT em todas as requisicoes automaticamente.
 axios.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
@@ -37,7 +32,6 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-// Callback registrado pelo AuthContext para reagir a sessao expirada (401).
 let onUnauthorized = null;
 export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn;

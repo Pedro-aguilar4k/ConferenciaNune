@@ -2,10 +2,13 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ScanBarcode, ArrowLeft, PlayCircle, StopCircle, CheckCircle2, XCircle, SkipForward, PackageCheck, Printer } from 'lucide-react';
+import { ScanBarcode, ArrowLeft, PlayCircle, StopCircle, CheckCircle2, XCircle, SkipForward, PackageCheck, Printer, Barcode, CloudUpload, ClipboardList } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { API } from '@/lib/api';
+import { useScanQueue } from '@/hooks/useScanQueue';
+
+const newScanId = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 export default function Conference() {
   const { notaId } = useParams();
@@ -62,12 +65,44 @@ function ConferenceGame({ notaId }) {
   const [activeItem, setActiveItem] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [scanValue, setScanValue] = useState('');
-  const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [operadorNome, setOperadorNome] = useState('');
+  const [finalizing, setFinalizing] = useState(false);
+  const [addBarcodeOpen, setAddBarcodeOpen] = useState(false);
+  const [addBarcodeValue, setAddBarcodeValue] = useState('');
   const scannerRef = useRef(null);
+  const addBarcodeRef = useRef(null);
   const feedbackTimer = useRef(null);
   const completeTimer = useRef(null);
   const navigate = useNavigate();
+
+  // Reconcilia um item com a resposta autoritativa do servidor (chega em 2o plano)
+  const reconcileItem = useCallback((serverItem) => {
+    if (!serverItem?.id) return;
+    setItens(prev => prev.map(i => i.id === serverItem.id
+      ? { ...i, quantidade_conferida: serverItem.quantidade_conferida }
+      : i));
+  }, []);
+
+  const onScanResult = useCallback((data) => {
+    if (data?.item) reconcileItem(data.item);
+    if (data?.tipo === 'duplicado_ignorado') return; // replay silencioso após recuperação
+    clearTimeout(completeTimer.current);
+    if (data?.success) {
+      if (data.tipo === 'completo') {
+        setFeedback({ kind: 'completo', title: 'ITEM CONFERIDO', sub: data.item?.produto_interno_codigo });
+        clearTimeout(feedbackTimer.current);
+        feedbackTimer.current = setTimeout(() => setFeedback(null), 1500);
+        completeTimer.current = setTimeout(() => setActiveItem(null), 1500);
+      } else if (data.item) {
+        setActiveItem(data.item);
+      }
+    } else {
+      showServerError(data);
+    }
+  }, [reconcileItem]);
+
+  const { enqueue, flush, pending: scansPendentes, syncError } = useScanQueue(notaId, { onResult: onScanResult });
 
   const fetchData = useCallback(async () => {
     try {
@@ -86,14 +121,15 @@ function ConferenceGame({ notaId }) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const dialogsAbertos = reviewOpen || addBarcodeOpen;
   useEffect(() => {
-    if (nota?.status !== 'em_conferencia' || finalizeDialogOpen) return;
+    if (nota?.status !== 'em_conferencia' || dialogsAbertos) return;
     const t = setInterval(() => {
       if (document.activeElement !== scannerRef.current) scannerRef.current?.focus();
     }, 800);
     scannerRef.current?.focus();
     return () => clearInterval(t);
-  }, [nota?.status, finalizeDialogOpen]);
+  }, [nota?.status, dialogsAbertos]);
 
   useEffect(() => () => { clearTimeout(feedbackTimer.current); clearTimeout(completeTimer.current); }, []);
 
@@ -101,6 +137,18 @@ function ConferenceGame({ notaId }) {
     clearTimeout(feedbackTimer.current);
     setFeedback(fb);
     feedbackTimer.current = setTimeout(() => setFeedback(null), ms);
+  };
+
+  const showServerError = (d) => {
+    if (d.tipo === 'produto_errado') {
+      showFeedback({ kind: 'erro', title: 'PRODUTO NAO E O INDICADO', sub: `Bipado: ${d.scanned?.produto_interno_codigo || d.scanned?.codigo || ''} - ${d.scanned?.descricao_nfe || d.scanned?.descricao || ''}` });
+    } else if (d.tipo === 'ja_conferido') {
+      showFeedback({ kind: 'aviso', title: 'ITEM JA CONFERIDO', sub: `${d.item?.produto_interno_codigo || ''} ja foi contado por completo` });
+    } else if (d.tipo === 'nao_pertence') {
+      showFeedback({ kind: 'erro', title: 'PRODUTO NAO PERTENCE A ESTA NOTA', sub: `${d.scanned?.codigo || ''} - ${d.scanned?.descricao || ''}` });
+    } else {
+      showFeedback({ kind: 'erro', title: 'CODIGO NAO ENCONTRADO', sub: 'Codigo nao pertence a esta nota' });
+    }
   };
 
   const handleStart = async () => {
@@ -113,70 +161,105 @@ function ConferenceGame({ notaId }) {
     } catch (e) { toast.error(e.response?.data?.detail || 'Erro ao iniciar'); }
   };
 
-  const refreshItens = async () => {
-    try {
-      const res = await axios.get(`${API}/notas/${notaId}`);
-      setItens(res.data.itens);
-      setNota(res.data.nota);
-    } catch (e) { /* ignore */ }
-  };
+  // Incrementa localmente (otimista) e devolve o item atualizado
+  const optimisticInc = useCallback((itemId) => {
+    let updated = null;
+    setItens(prev => prev.map(i => {
+      if (i.id !== itemId) return i;
+      const nova = Math.min(i.quantidade, (i.quantidade_conferida || 0) + 1);
+      updated = { ...i, quantidade_conferida: nova };
+      return updated;
+    }));
+    if (updated) setActiveItem(updated);
+    return updated;
+  }, []);
 
-  const handleScan = async (e) => {
-    if (e.key !== 'Enter' || !scanValue.trim()) return;
+  // Decide, localmente, qual item deve receber +1 (espelha a regra do backend)
+  const resolveIncrementTarget = useCallback((code) => {
+    const matches = (i) => i.ean === code || i.produto_interno_codigo === code;
+    if (activeItem && activeItem.quantidade_conferida < activeItem.quantidade) {
+      const fresh = itens.find(i => i.id === activeItem.id);
+      return fresh && matches(fresh) ? fresh.id : null; // produto diferente => backend decide
+    }
+    const cand = itens.find(i => matches(i) && i.quantidade_conferida < i.quantidade);
+    return cand ? cand.id : null;
+  }, [activeItem, itens]);
+
+  const handleScan = (e) => {
+    if (e.key !== 'Enter' || e.nativeEvent?.isComposing || e.keyCode === 229 || !scanValue.trim()) return;
     const code = scanValue.trim();
     setScanValue('');
-    try {
-      const res = await axios.post(`${API}/conferencias/leitura`, {
-        nota_id: notaId, codigo_barras: code, item_ativo_id: activeItem?.id || null,
-      });
-      const d = res.data;
-      if (d.success) {
-        clearTimeout(completeTimer.current);
-        setActiveItem(d.item);
-        setFeedback(null);
-        if (d.tipo === 'completo') {
-          showFeedback({ kind: 'completo', title: 'ITEM CONFERIDO', sub: d.item.produto_interno_codigo }, 1500);
-          completeTimer.current = setTimeout(() => setActiveItem(null), 1500);
-        }
-      } else {
-        if (d.tipo === 'produto_errado') {
-          showFeedback({ kind: 'erro', title: 'PRODUTO NAO E O INDICADO', sub: `Bipado: ${d.scanned?.produto_interno_codigo || d.scanned?.codigo || code} - ${d.scanned?.descricao_nfe || d.scanned?.descricao || ''}` });
-        } else if (d.tipo === 'ja_conferido') {
-          showFeedback({ kind: 'aviso', title: 'ITEM JA CONFERIDO', sub: `${d.item?.produto_interno_codigo || code} ja foi contado por completo` });
-        } else if (d.tipo === 'nao_pertence') {
-          showFeedback({ kind: 'erro', title: 'PRODUTO NAO PERTENCE A ESTA NOTA', sub: `${d.scanned?.codigo || code} - ${d.scanned?.descricao || ''}` });
-        } else {
-          showFeedback({ kind: 'erro', title: 'CODIGO NAO ENCONTRADO', sub: `Codigo bipado: ${code}` });
-        }
-      }
-      refreshItens();
-    } catch (e) {
-      showFeedback({ kind: 'erro', title: 'ERRO NA LEITURA', sub: 'Tente novamente' });
+    const scan_uuid = newScanId();
+    const activeId = activeItem?.id || null;
+    // Atualizacao otimista: o numero sobe na hora, sem esperar o servidor
+    const target = resolveIncrementTarget(code);
+    if (target) {
+      setFeedback(null);
+      optimisticInc(target);
     }
+    // Persiste/env­ia em 2o plano com retry (idempotente). Nunca perde a bipagem.
+    enqueue({
+      scan_uuid,
+      endpoint: '/conferencias/leitura',
+      body: { nota_id: notaId, codigo_barras: code, item_ativo_id: activeId, scan_uuid },
+    });
+  };
+
+  const handleSelectItem = (item) => {
+    setActiveItem(item);
+    setFeedback(null);
+    setAddBarcodeOpen(false);
+  };
+
+  const openAddBarcode = () => {
+    if (!activeItem) return;
+    setAddBarcodeOpen(true);
+    setTimeout(() => addBarcodeRef.current?.focus(), 50);
+  };
+
+  const handleAddBarcode = (e) => {
+    if (e.key !== 'Enter' || e.nativeEvent?.isComposing || e.keyCode === 229 || !addBarcodeValue.trim() || !activeItem) return;
+    const code = addBarcodeValue.trim();
+    setAddBarcodeValue('');
+    setAddBarcodeOpen(false);
+    const scan_uuid = newScanId();
+    optimisticInc(activeItem.id);
+    enqueue({
+      scan_uuid,
+      endpoint: '/conferencias/adicionar-codigo-item',
+      body: { nota_id: notaId, item_nota_id: activeItem.id, codigo_barras: code, scan_uuid },
+    });
+    toast.success(`Codigo ${code} salvo no produto ${activeItem.produto_interno_codigo}.`);
   };
 
   const handleSkip = () => {
     setActiveItem(null);
     setFeedback(null);
-    toast.info('Item pulado. Bipe o proximo produto.');
+    setAddBarcodeOpen(false);
     scannerRef.current?.focus();
   };
 
   const handleFinalize = () => {
-    const incomplete = itens.filter(i => i.quantidade_conferida < i.quantidade);
-    if (incomplete.length > 0 && !window.confirm(`Existem ${incomplete.length} item(ns) incompletos. Finalizar mesmo assim?`)) return;
     setOperadorNome('');
-    setFinalizeDialogOpen(true);
+    setReviewOpen(true);
   };
 
   const handleConfirmFinalize = async () => {
-    if (!operadorNome.trim()) return;
+    if (!operadorNome.trim() || finalizing) return;
+    setFinalizing(true);
     try {
+      // Garante que TODAS as bipagens foram salvas antes de fechar a nota
+      await flush();
       const res = await axios.post(`${API}/conferencias/finalizar/${notaId}`, { operador: operadorNome.trim() });
+      try { localStorage.removeItem(`conferencia:scanqueue:${notaId}`); } catch { /* ignore */ }
       setNota(res.data);
-      setFinalizeDialogOpen(false);
+      setReviewOpen(false);
       toast.success('Conferencia finalizada!');
-    } catch (e) { toast.error('Erro ao finalizar'); }
+    } catch (e) {
+      toast.error('Ainda ha leituras nao salvas. Verifique a conexao e tente novamente.');
+    } finally {
+      setFinalizing(false);
+    }
   };
 
   const itensCompletos = useMemo(

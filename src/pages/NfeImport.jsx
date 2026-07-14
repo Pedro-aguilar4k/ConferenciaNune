@@ -12,12 +12,15 @@ import TableSkeleton from '@/components/TableSkeleton';
 import SefazImport from '@/components/SefazImport';
 import { useAuth, PERM } from '@/contexts/AuthContext';
 
+// Fluxo de cores: amarelo (falta vincular) -> laranja (pronta/em conferencia) -> verde (conferida)
 const statusMap = {
-  pendente: { label: 'Pendente', class: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
-  em_conferencia: { label: 'Em Conferencia', class: 'bg-blue-500/10 text-[#71717A] border-blue-500/20' },
-  conferida: { label: 'Conferida', class: 'bg-green-500/10 text-green-400 border-green-500/20' },
-  divergente: { label: 'Divergente', class: 'bg-red-500/10 text-red-400 border-red-500/20' },
+  aguardando_vinculo: { label: 'Aguardando vinculo', order: 0, class: 'bg-amber-500/10 text-amber-400 border-amber-500/30', accent: 'border-l-amber-500' },
+  pendente: { label: 'Pronta p/ conferencia', order: 1, class: 'bg-orange-500/10 text-orange-400 border-orange-500/30', accent: 'border-l-orange-500' },
+  em_conferencia: { label: 'Em conferencia', order: 1, class: 'bg-orange-500/10 text-orange-400 border-orange-500/30', accent: 'border-l-orange-500' },
+  conferida: { label: 'Conferida', order: 2, class: 'bg-green-500/10 text-green-400 border-green-500/30', accent: 'border-l-green-500' },
+  divergente: { label: 'Conferida c/ divergencia', order: 2, class: 'bg-green-500/10 text-green-400 border-green-500/30', accent: 'border-l-green-500' },
 };
+const statusOrder = (s) => (statusMap[s]?.order ?? 1);
 
 export default function NfeImport() {
   const queryClient = useQueryClient();
@@ -45,11 +48,12 @@ export default function NfeImport() {
       formData.append('file', file);
       const res = await axios.post(`${API}/notas/importar-xml`, formData);
       const importedNota = res.data.nota;
-      const hasPending = importedNota.itens_identificados < importedNota.total_itens;
-      toast.success(`Nota ${importedNota.numero || ''} importada! ${importedNota.itens_identificados}/${importedNota.total_itens} itens identificados.`);
+      const faltam = importedNota.total_itens - importedNota.itens_identificados;
       fetchNotas();
-      if (hasPending) {
-        navigate(`/vinculacao/${importedNota.id}`);
+      if (faltam > 0) {
+        toast.warning(`Nota ${importedNota.numero || ''} importada. Faltam ${faltam} produto(s) sem vinculo antes de conferir.`);
+      } else {
+        toast.success(`Nota ${importedNota.numero || ''} importada e pronta para conferencia.`);
       }
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Erro ao importar XML');
@@ -68,13 +72,20 @@ export default function NfeImport() {
   };
 
   const notasFiltradas = useMemo(() => {
-    if (!busca.trim()) return notas;
-    const q = busca.toLowerCase();
-    return notas.filter(n => (
-      (n.numero || '').toLowerCase().includes(q) ||
-      (n.fornecedor_nome || '').toLowerCase().includes(q) ||
-      (n.fornecedor_cnpj || '').includes(q)
-    ));
+    const q = busca.trim().toLowerCase();
+    const base = q
+      ? notas.filter(n => (
+          (n.numero || '').toLowerCase().includes(q) ||
+          (n.fornecedor_nome || '').toLowerCase().includes(q) ||
+          (n.fornecedor_cnpj || '').includes(q)
+        ))
+      : notas;
+    // Agrupa por status (amarelo -> laranja -> verde) e, dentro do grupo, mais recentes primeiro
+    return [...base].sort((a, b) => {
+      const diff = statusOrder(a.status) - statusOrder(b.status);
+      if (diff !== 0) return diff;
+      return (b.created_at || '').localeCompare(a.created_at || '');
+    });
   }, [notas, busca]);
 
   return (
@@ -143,31 +154,39 @@ export default function NfeImport() {
               ) : notasFiltradas.map(nota => {
                 const st = statusMap[nota.status] || statusMap.pendente;
                 const temRelatorio = !!nota.relatorio_salvo;
+                const faltamVinculo = Math.max(0, nota.total_itens - nota.itens_identificados);
+                const aguardando = nota.status === 'aguardando_vinculo';
+                const finalizada = nota.status === 'conferida' || nota.status === 'divergente';
                 return (
-                  <TableRow key={nota.id} className="border-[#1A1A1A] hover:bg-[#1A1A1A]/50">
-                    <TableCell className="font-mono text-sm text-[#F4F4F5]">{nota.numero || '-'}</TableCell>
+                  <TableRow key={nota.id} className={`border-[#1A1A1A] hover:bg-[#1A1A1A]/50 border-l-4 ${st.accent}`}>
+                    <TableCell className="font-mono text-sm text-[#F4F4F5]">
+                      {nota.numero || '-'}
+                      {aguardando && (
+                        <span className="block mt-0.5 text-[10px] font-sans text-amber-400/90">Faltam {faltamVinculo} produto(s) sem vinculo</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-[#A1A1AA]">{nota.fornecedor_nome || '-'}</TableCell>
                     <TableCell className="font-mono text-sm text-[#F4F4F5]">R$ {nota.valor_total?.toFixed(2)}</TableCell>
                     <TableCell className="font-mono text-sm text-[#A1A1AA]">{nota.total_itens}</TableCell>
                     <TableCell className="font-mono text-sm">
-                      <span className={nota.itens_identificados === nota.total_itens ? 'text-green-400' : 'text-yellow-400'}>
+                      <span className={nota.itens_identificados === nota.total_itens ? 'text-green-400' : 'text-amber-400'}>
                         {nota.itens_identificados}/{nota.total_itens}
                       </span>
                     </TableCell>
                     <TableCell><Badge className={`${st.class} border text-[10px]`}>{st.label}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        {nota.itens_identificados < nota.total_itens && nota.status !== 'conferida' ? (
+                        {aguardando ? (
                           <button onClick={() => navigate(`/vinculacao/${nota.id}`)}
-                            className="p-1.5 hover:bg-yellow-600/20 rounded text-yellow-400 transition-colors" title="Vincular Produtos">
+                            className="p-1.5 hover:bg-amber-600/20 rounded text-amber-400 transition-colors" title="Vincular Produtos">
                             <Link2 className="h-4 w-4" />
                           </button>
-                        ) : (
+                        ) : !finalizada ? (
                           <button onClick={() => navigate(`/conferencia/${nota.id}`)}
-                            className="p-1.5 hover:bg-blue-600/30 rounded text-[#71717A] transition-colors" title="Conferir">
+                            className="p-1.5 hover:bg-orange-600/20 rounded text-orange-400 transition-colors" title="Conferir">
                             <ClipboardCheck className="h-4 w-4" />
                           </button>
-                        )}
+                        ) : null}
                         {temRelatorio && (
                           <button onClick={() => navigate(`/relatorio/${nota.id}`)}
                             className="p-1.5 hover:bg-green-600/20 rounded text-green-400 transition-colors" title="Ver Relatorio de Conferencia">

@@ -124,8 +124,10 @@ async def _ensure_indexes():
         await asyncio.gather(
             db.produtos.create_index("codigo", background=True),
             db.produtos.create_index("ean", background=True),
+            db.produtos.create_index("codigos_barras", background=True),
             db.produtos.create_index("ativo", background=True),
             db.fornecedores.create_index("cnpj", background=True),
+            db.historico_leituras.create_index([("nota_id", 1), ("scan_uuid", 1)], background=True),
             db.itens_nota.create_index("nota_id", background=True),
             db.itens_nota.create_index([("produto_interno_id", 1)], background=True),
             db.itens_nota.create_index([("cprod", 1), ("produto_interno_codigo", 1)], background=True),
@@ -256,6 +258,7 @@ class Produto(BaseDocument):
     codigo: str
     descricao: str
     ean: Optional[str] = None
+    codigos_barras: List[str] = Field(default_factory=list)
     unidade: str = "UN"
     preco: float = 0.0
     categoria: Optional[str] = None
@@ -365,6 +368,7 @@ class HistoricoLeitura(BaseDocument):
     produto_interno_id: Optional[str] = None
     item_nota_id: Optional[str] = None
     resultado: str
+    scan_uuid: Optional[str] = None
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 async def match_product(item_desc, item_ean, item_cprod, fornecedor_cnpj, quantidade=0, _cache=None):
@@ -603,7 +607,11 @@ async def _importar_nfe_from_content(content, *, ignorar_duplicada=False):
         if match_result['produto']:
             itens_identificados += 1
 
-    await db.notas.update_one({'_id': ObjectId(nota_id)}, {'$set': {'itens_identificados': itens_identificados}})
+    novo_status = 'pendente' if itens_identificados >= len(items) else 'aguardando_vinculo'
+    await db.notas.update_one(
+        {'_id': ObjectId(nota_id)},
+        {'$set': {'itens_identificados': itens_identificados, 'status': novo_status}},
+    )
     nota_doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     items_docs = await db.itens_nota.find({'nota_id': nota_id}).to_list(1000)
     return {'nota': Nota.from_mongo(nota_doc).model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items_docs]}
@@ -776,11 +784,19 @@ async def iniciar_conferencia(nota_id: str, _: dict = Depends(require_permission
     if pending > 0:
         raise HTTPException(400, f"Existem {pending} produto(s) sem vinculo. Complete a vinculacao antes de iniciar a conferencia.")
 
-    await db.notas.update_one(
-        {'_id': ObjectId(nota_id)},
-        {'$set': {'status': 'em_conferencia', 'conferencia_inicio': datetime.now(timezone.utc).isoformat()}}
-    )
-    await db.itens_nota.update_many({'nota_id': nota_id}, {'$set': {'quantidade_conferida': 0}})
+    ja_em_conferencia = doc.get('status') == 'em_conferencia'
+    if ja_em_conferencia:
+        # Retomada: NAO zera as contagens ja bipadas (protege contra perda de dados ao recarregar)
+        await db.notas.update_one(
+            {'_id': ObjectId(nota_id)},
+            {'$set': {'status': 'em_conferencia'}},
+        )
+    else:
+        await db.notas.update_one(
+            {'_id': ObjectId(nota_id)},
+            {'$set': {'status': 'em_conferencia', 'conferencia_inicio': datetime.now(timezone.utc).isoformat()}}
+        )
+        await db.itens_nota.update_many({'nota_id': nota_id}, {'$set': {'quantidade_conferida': 0}})
     nota_doc = await db.notas.find_one({'_id': ObjectId(nota_id)})
     items = await db.itens_nota.find({'nota_id': nota_id}).to_list(1000)
     return {'nota': Nota.from_mongo(nota_doc).model_dump(), 'itens': [ItemNota.from_mongo(i).model_dump() for i in items]}
@@ -816,6 +832,7 @@ class LeituraInput(BaseModel):
     nota_id: str
     codigo_barras: str
     item_ativo_id: Optional[str] = None
+    scan_uuid: Optional[str] = None
 
 def _item_game_payload(doc):
     o = ItemNota.from_mongo(doc)
@@ -840,8 +857,25 @@ async def processar_leitura(data: LeituraInput, _: dict = Depends(require_permis
 
     codigo = data.codigo_barras.strip()
 
+    # Idempotencia: se essa bipagem (scan_uuid) ja foi processada com sucesso, nao conta de novo.
+    if data.scan_uuid:
+        ja = await db.historico_leituras.find_one({'nota_id': data.nota_id, 'scan_uuid': data.scan_uuid})
+        if ja:
+            progress = await _nota_progress(data.nota_id)
+            item_doc = None
+            if ja.get('item_nota_id'):
+                item_doc = await db.itens_nota.find_one({'_id': ObjectId(ja['item_nota_id'])})
+            return {
+                'success': ja.get('resultado') == 'encontrado',
+                'tipo': 'duplicado_ignorado',
+                'message': 'Leitura ja registrada.',
+                'item': _item_game_payload(item_doc) if item_doc else None,
+                'progress': progress,
+                'nota_completa': progress['itens_completos'] >= progress['total_itens'],
+            }
+
     candidates = await db.itens_nota.find({'nota_id': data.nota_id, 'ean': codigo}).to_list(100)
-    produto = await db.produtos.find_one({'ean': codigo, 'ativo': True})
+    produto = await db.produtos.find_one({'$or': [{'ean': codigo}, {'codigos_barras': codigo}], 'ativo': True})
     if not produto:
         produto = await db.produtos.find_one({'codigo': codigo, 'ativo': True})
     if produto:
@@ -900,7 +934,7 @@ async def processar_leitura(data: LeituraInput, _: dict = Depends(require_permis
     status = 'conferido' if completed else 'em_contagem'
     await db.itens_nota.update_one({'_id': ObjectId(item_obj.id)}, {'$set': {'quantidade_conferida': new_qty, 'status': status}})
 
-    hist = HistoricoLeitura(nota_id=data.nota_id, codigo_barras=codigo, produto_interno_id=item_obj.produto_interno_id, item_nota_id=item_obj.id, resultado='encontrado')
+    hist = HistoricoLeitura(nota_id=data.nota_id, codigo_barras=codigo, produto_interno_id=item_obj.produto_interno_id, item_nota_id=item_obj.id, resultado='encontrado', scan_uuid=data.scan_uuid)
     await db.historico_leituras.insert_one(hist.to_mongo())
 
     progress = await _nota_progress(data.nota_id)
@@ -916,6 +950,67 @@ async def processar_leitura(data: LeituraInput, _: dict = Depends(require_permis
         'progress': progress,
         'nota_completa': progress['itens_completos'] >= progress['total_itens'],
     }
+
+class AdicionarCodigoItemInput(BaseModel):
+    nota_id: str
+    item_nota_id: str
+    codigo_barras: str
+    scan_uuid: Optional[str] = None
+
+@api_router.post("/conferencias/adicionar-codigo-item")
+async def adicionar_codigo_item(data: AdicionarCodigoItemInput, _: dict = Depends(require_permission(auth_svc.PERM_CONFERIR))):
+    """Adiciona um codigo de barras ao produto interno ja vinculado ao item e conta +1 na conferencia.
+    Usado quando o XML nao trouxe o EAN: o operador seleciona o item, bipa o codigo e ele fica salvo no cadastro."""
+    codigo = data.codigo_barras.strip()
+    if not codigo:
+        raise HTTPException(400, "Codigo de barras vazio")
+
+    item_doc = await db.itens_nota.find_one({'_id': ObjectId(data.item_nota_id)})
+    if not item_doc or item_doc.get('nota_id') != data.nota_id:
+        raise HTTPException(404, "Item nao encontrado nesta nota")
+    item_obj = ItemNota.from_mongo(item_doc)
+    if not item_obj.produto_interno_id:
+        raise HTTPException(400, "Este item ainda nao possui produto interno vinculado")
+
+    # Idempotencia
+    if data.scan_uuid:
+        ja = await db.historico_leituras.find_one({'nota_id': data.nota_id, 'scan_uuid': data.scan_uuid})
+        if ja:
+            progress = await _nota_progress(data.nota_id)
+            fresh = await db.itens_nota.find_one({'_id': ObjectId(data.item_nota_id)})
+            return {'success': True, 'tipo': 'duplicado_ignorado', 'message': 'Leitura ja registrada.',
+                    'item': _item_game_payload(fresh), 'progress': progress,
+                    'nota_completa': progress['itens_completos'] >= progress['total_itens']}
+
+    # Salva o codigo no produto (dedup) para reconhecimento automatico futuro
+    await db.produtos.update_one(
+        {'_id': ObjectId(item_obj.produto_interno_id)},
+        {'$addToSet': {'codigos_barras': codigo}},
+    )
+
+    if item_obj.quantidade_conferida >= item_obj.quantidade:
+        progress = await _nota_progress(data.nota_id)
+        return {'success': False, 'tipo': 'ja_conferido', 'message': 'Este item ja foi conferido!',
+                'item': _item_game_payload(item_doc), 'progress': progress}
+
+    new_qty = item_obj.quantidade_conferida + 1
+    completed = new_qty >= item_obj.quantidade
+    status = 'conferido' if completed else 'em_contagem'
+    await db.itens_nota.update_one({'_id': ObjectId(item_obj.id)}, {'$set': {'quantidade_conferida': new_qty, 'status': status}})
+
+    hist = HistoricoLeitura(nota_id=data.nota_id, codigo_barras=codigo, produto_interno_id=item_obj.produto_interno_id,
+                            item_nota_id=item_obj.id, resultado='encontrado', scan_uuid=data.scan_uuid)
+    await db.historico_leituras.insert_one(hist.to_mongo())
+
+    progress = await _nota_progress(data.nota_id)
+    await db.notas.update_one({'_id': ObjectId(data.nota_id)}, {'$set': {'itens_conferidos': progress['itens_completos']}})
+
+    payload = _item_game_payload(item_doc)
+    payload['quantidade_conferida'] = new_qty
+    return {'success': True, 'tipo': 'completo' if completed else 'parcial',
+            'message': 'Codigo salvo e item conferido!' if completed else f'{new_qty:g} de {item_obj.quantidade:g}',
+            'item': payload, 'progress': progress,
+            'nota_completa': progress['itens_completos'] >= progress['total_itens']}
 
 class ConfirmarVinculoInput(BaseModel):
     item_nota_id: str
@@ -969,7 +1064,12 @@ async def confirmar_vinculo(data: ConfirmarVinculoInput, _: dict = Depends(requi
 
     items = await db.itens_nota.find({'nota_id': item.nota_id}).to_list(1000)
     identified = sum(1 for i in items if i.get('produto_interno_id'))
-    await db.notas.update_one({'_id': ObjectId(item.nota_id)}, {'$set': {'itens_identificados': identified}})
+    pendentes = sum(1 for i in items if not i.get('produto_interno_id') and not i.get('ignorado'))
+    nota_updates = {'itens_identificados': identified}
+    # So muda o status de vinculacao se a nota ainda nao entrou em conferencia/foi finalizada
+    if nota and nota.status in ('aguardando_vinculo', 'pendente'):
+        nota_updates['status'] = 'aguardando_vinculo' if pendentes > 0 else 'pendente'
+    await db.notas.update_one({'_id': ObjectId(item.nota_id)}, {'$set': nota_updates})
 
     updated = await db.itens_nota.find_one({'_id': ObjectId(data.item_nota_id)})
     return ItemNota.from_mongo(updated).model_dump()

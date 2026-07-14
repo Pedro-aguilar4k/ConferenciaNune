@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API } from '@/lib/api';
+import { fetchJson, queryKeys, listQueryOptions } from '@/lib/queries';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,30 +29,27 @@ const emptyForm = { username: '', nome: '', password: '', role: 'estoquista' };
 
 export default function Users() {
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      const [uRes, rRes] = await Promise.all([
-        axios.get(`${API}/usuarios`),
-        axios.get(`${API}/roles`),
-      ]);
-      setUsers(uRes.data);
-      setRoles(rRes.data);
-    } catch {
-      toast.error('Erro ao carregar usuários');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: users = [], isPending: loading } = useQuery({
+    queryKey: queryKeys.usuarios,
+    queryFn: () => fetchJson('/usuarios'),
+    ...listQueryOptions,
+  });
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  const { data: roles = [] } = useQuery({
+    queryKey: queryKeys.roles,
+    queryFn: () => fetchJson('/roles'),
+    staleTime: 30 * 60_000,
+    gcTime: 60 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const fetchUsers = () => queryClient.invalidateQueries({ queryKey: queryKeys.usuarios });
 
   const openCreate = () => {
     setEditing(null);

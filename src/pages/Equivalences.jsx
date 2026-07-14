@@ -1,36 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2, Link2, Filter } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { API } from '@/lib/api';
+import { fetchJson, queryKeys, listQueryOptions } from '@/lib/queries';
+import TableSkeleton from '@/components/TableSkeleton';
 
 export default function Equivalences() {
-  const [equivalencias, setEquivalencias] = useState([]);
-  const [fornecedores, setFornecedores] = useState([]);
+  const queryClient = useQueryClient();
   const [filterCnpj, setFilterCnpj] = useState('all');
 
-  const fetchEquivalencias = useCallback(async () => {
-    try {
-      const params = {};
-      if (filterCnpj && filterCnpj !== 'all') params.fornecedor_cnpj = filterCnpj;
-      const res = await axios.get(`${API}/equivalencias`, { params });
-      setEquivalencias(res.data);
-    } catch (e) { console.error(e); }
-  }, [filterCnpj]);
+  const { data: equivalencias = [], isPending, isFetching } = useQuery({
+    queryKey: queryKeys.equivalencias(filterCnpj !== 'all' ? filterCnpj : undefined),
+    queryFn: () => fetchJson('/equivalencias', { params: filterCnpj !== 'all' ? { fornecedor_cnpj: filterCnpj } : {} }),
+    ...listQueryOptions,
+  });
 
-  useEffect(() => {
-    axios.get(`${API}/fornecedores`).then(r => setFornecedores(r.data)).catch(console.error);
-  }, []);
-
-  useEffect(() => { fetchEquivalencias(); }, [fetchEquivalencias]);
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: queryKeys.fornecedores(),
+    queryFn: () => fetchJson('/fornecedores'),
+    ...listQueryOptions,
+  });
 
   const handleDelete = async (id) => {
     try {
       await axios.delete(`${API}/equivalencias/${id}`);
       toast.success('Equivalencia removida');
-      fetchEquivalencias();
+      queryClient.invalidateQueries({ queryKey: ['equivalencias'] });
     } catch (e) { toast.error('Erro ao remover'); }
   };
 
@@ -58,7 +57,8 @@ export default function Equivalences() {
         </Select>
       </div>
 
-      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden">
+      {isPending ? <TableSkeleton rows={6} cols={7} /> : (
+      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden" data-refetching={isFetching ? 'true' : undefined}>
         {equivalencias.length === 0 ? (
           <div className="p-8 text-center text-zinc-600">
             <Link2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -97,6 +97,7 @@ export default function Equivalences() {
           </Table>
         )}
       </div>
+      )}
     </div>
   );
 }

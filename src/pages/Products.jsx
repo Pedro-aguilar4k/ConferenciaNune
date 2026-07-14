@@ -1,35 +1,34 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Pencil, Trash2, Package, FileSpreadsheet } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { API } from '@/lib/api';
+import { fetchJson, queryKeys, listQueryOptions } from '@/lib/queries';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import TableSkeleton from '@/components/TableSkeleton';
 
 const emptyForm = { codigo: '', descricao: '', ean: '', unidade: 'UN', preco: 0, categoria: '' };
 
 export default function Products() {
-  const [produtos, setProdutos] = useState([]);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [exporting, setExporting] = useState(false);
 
-  const fetchProdutos = useCallback(async (term) => {
-    try {
-      const q = term !== undefined ? term : search;
-      const res = await axios.get(`${API}/produtos`, { params: q ? { search: q } : {} });
-      setProdutos(res.data);
-    } catch (e) { console.error(e); }
-  }, [search]);
+  const { data: produtos = [], isPending, isFetching } = useQuery({
+    queryKey: queryKeys.produtos(debouncedSearch),
+    queryFn: () => fetchJson('/produtos', { params: debouncedSearch ? { search: debouncedSearch } : {} }),
+    ...listQueryOptions,
+  });
 
-  // Single debounced effect: covers both mount and subsequent search changes.
-  useEffect(() => {
-    const t = setTimeout(() => fetchProdutos(search), 300);
-    return () => clearTimeout(t);
-  }, [search, fetchProdutos]);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['produtos'] });
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (p) => { setEditing(p); setForm({ codigo: p.codigo, descricao: p.descricao, ean: p.ean || '', unidade: p.unidade, preco: p.preco, categoria: p.categoria || '' }); setDialogOpen(true); };
@@ -44,7 +43,7 @@ export default function Products() {
         toast.success('Produto criado');
       }
       setDialogOpen(false);
-      fetchProdutos();
+      invalidate();
     } catch (e) { toast.error(e.response?.data?.detail || 'Erro'); }
   };
 
@@ -52,7 +51,7 @@ export default function Products() {
     try {
       await axios.delete(`${API}/produtos/${id}`);
       toast.success('Produto removido');
-      fetchProdutos();
+      invalidate();
     } catch (e) { toast.error('Erro ao remover'); }
   };
 
@@ -99,7 +98,8 @@ export default function Products() {
           className="pl-10 bg-[#121212] border-[#27272A] text-[#F4F4F5] placeholder:text-zinc-600 focus:border-blue-500" />
       </div>
 
-      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden">
+      {isPending ? <TableSkeleton rows={7} cols={7} /> : (
+      <div className="bg-[#121212] border border-[#27272A] rounded-md overflow-hidden" data-refetching={isFetching ? 'true' : undefined}>
         {produtos.length === 0 ? (
           <div className="p-8 text-center text-zinc-600">
             <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -141,6 +141,7 @@ export default function Products() {
           </Table>
         )}
       </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5]">

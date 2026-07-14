@@ -1,26 +1,20 @@
-import { useEffect, useState, useMemo } from 'react';
-import axios from 'axios';
+import { useMemo } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { FileCheck, Clock, AlertTriangle, Link2, Target, Zap, Brain } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { API } from '@/lib/api';
+import { fetchJson, queryKeys } from '@/lib/queries';
+import DashboardSkeleton from '@/components/DashboardSkeleton';
 
 export default function Dashboard() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { fetchDashboard(); }, []);
-
-  const fetchDashboard = async () => {
-    try {
-      const res = await axios.get(`${API}/dashboard`);
-      setData(res.data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isPending, isError, isFetching } = useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: () => fetchJson('/dashboard'),
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+  });
 
   const stats = useMemo(() => {
     if (!data) return [];
@@ -37,10 +31,10 @@ export default function Dashboard() {
   const methodData = useMemo(() => {
     if (!data?.reconhecimento_por_metodo) return [];
     return [
-      { name: 'EAN', value: data.reconhecimento_por_metodo.ean, color: '#22C55E' },
-      { name: 'Vinculo', value: data.reconhecimento_por_metodo.vinculo, color: '#3B82F6' },
-      { name: 'Similaridade', value: data.reconhecimento_por_metodo.similaridade, color: '#A855F7' },
-      { name: 'Manual', value: data.reconhecimento_por_metodo.manual, color: '#71717A' },
+      { name: 'EAN', value: data.reconhecimento_por_metodo.ean, color: '#161A62' },
+      { name: 'Vínculo', value: data.reconhecimento_por_metodo.vinculo, color: '#E56024' },
+      { name: 'Similaridade', value: data.reconhecimento_por_metodo.similaridade, color: '#4F7B64' },
+      { name: 'Manual', value: data.reconhecimento_por_metodo.manual, color: '#8A91A0' },
     ].filter(d => d.value > 0);
   }, [data]);
 
@@ -49,22 +43,25 @@ export default function Dashboard() {
     [methodData]
   );
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-[#71717A]">Carregando dashboard...</div>;
-  if (!data) return <div className="text-[#71717A]">Erro ao carregar dashboard</div>;
+  if (isPending && !data) return <DashboardSkeleton />;
+  if (isError && !data) return <div className="text-[#71717A]">Erro ao carregar dashboard</div>;
+  if (!data) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[#71717A] text-xs">
-            <Brain className="h-3 w-3 text-[#71717A]" />
-            <span>{data.total_aprendizado || 0} aprendizados</span>
-          </div>
-          <div className="flex items-center gap-2 text-[#71717A] text-xs">
-            <Zap className="h-3 w-3 text-emerald-400" />
-            <span>{data.total_equivalencias} equivalencias</span>
-          </div>
+    <div className="space-y-6" data-refetching={isFetching ? 'true' : undefined}>
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <p className="mb-2 flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-[#161A62] uppercase">
+            Resumo do recebimento
+            {isFetching && <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#E56024] animate-pulse" aria-label="Atualizando" />}
+          </p>
+          <h1 className="font-heading text-3xl sm:text-4xl font-semibold text-[#F4F4F5] tracking-tight">Central operacional</h1>
+          <p className="mt-2 text-sm text-zinc-500">Acompanhe o fluxo de notas, vínculos e divergências em tempo real.</p>
+        </div>
+        <div className="flex items-center gap-5 border border-[#dfe3eb] bg-white px-4 py-3">
+          <div className="flex items-center gap-2 text-[#71717A] text-xs"><Brain className="h-4 w-4 text-[#161A62]" /><span><b className="font-mono text-[#101426]">{data.total_aprendizado || 0}</b> aprendizados</span></div>
+          <div className="h-5 w-px bg-[#dfe3eb]" />
+          <div className="flex items-center gap-2 text-[#71717A] text-xs"><Zap className="h-4 w-4 text-[#E56024]" /><span><b className="font-mono text-[#101426]">{data.total_equivalencias}</b> equivalências</span></div>
         </div>
       </div>
 
@@ -154,11 +151,11 @@ export default function Dashboard() {
           <h3 className="text-[10px] uppercase tracking-[0.12em] text-zinc-500 mb-4">Notas por Dia (Ultimos 7 dias)</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={data.notas_por_dia}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EC" />
               <XAxis dataKey="data" stroke="#71717A" tick={{ fontSize: 10 }} tickFormatter={v => v.slice(5)} />
               <YAxis stroke="#71717A" tick={{ fontSize: 10 }} allowDecimals={false} />
               <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #27272A', borderRadius: '4px', fontSize: 12 }} labelStyle={{ color: '#A1A1AA' }} />
-              <Bar dataKey="quantidade" fill="#3B82F6" radius={[2, 2, 0, 0]} name="Notas" />
+              <Bar dataKey="quantidade" fill="#161A62" radius={[2, 2, 0, 0]} name="Notas" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -170,11 +167,11 @@ export default function Dashboard() {
           {data.top_fornecedores.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={data.top_fornecedores} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EC" />
                 <XAxis type="number" stroke="#71717A" tick={{ fontSize: 10 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="nome" stroke="#71717A" tick={{ fontSize: 9 }} width={150} />
                 <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #27272A', borderRadius: '4px', fontSize: 12 }} />
-                <Bar dataKey="quantidade" fill="#22C55E" radius={[0, 2, 2, 0]} name="Notas" />
+                <Bar dataKey="quantidade" fill="#4F7B64" radius={[0, 2, 2, 0]} name="Notas" />
               </BarChart>
             </ResponsiveContainer>
           ) : (

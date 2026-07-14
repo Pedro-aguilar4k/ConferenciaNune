@@ -1,41 +1,37 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, ClipboardCheck, Package, Truck, Link2, Brain, Users, ChevronLeft, ChevronRight, Menu, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, ClipboardCheck, Package, Truck, Link2, Brain, Users, ChevronLeft, ChevronRight, Menu, X, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth, PERM } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const navItems = [
-  { path: '/',               icon: LayoutDashboard, label: 'Dashboard',      permission: null },
-  { path: '/notas',          icon: FileText,        label: 'Notas Fiscais',  permission: null },
-  { path: '/conferencia',    icon: ClipboardCheck,  label: 'Conferencia',    permission: PERM.CONFERIR },
-  { path: '/reconhecimento', icon: Brain,           label: 'Reconhecimento', permission: PERM.CADASTROS },
-  { path: '/produtos',       icon: Package,         label: 'Produtos',       permission: null },
-  { path: '/fornecedores',   icon: Truck,           label: 'Fornecedores',   permission: null },
-  { path: '/equivalencias',  icon: Link2,           label: 'Equivalencias',  permission: null },
-  { path: '/usuarios',       icon: Users,           label: 'Usuarios',       permission: PERM.USUARIOS },
+  { path: '/', icon: LayoutDashboard, label: 'Visão geral', permission: null, category: 'overview' },
+  { path: '/notas', icon: FileText, label: 'Notas fiscais', permission: null, category: 'operation' },
+  { path: '/conferencia', icon: ClipboardCheck, label: 'Conferência', permission: PERM.CONFERIR, category: 'operation' },
+  { path: '/reconhecimento', icon: Brain, label: 'Reconhecimento', permission: PERM.CADASTROS, category: 'intelligence' },
+  { path: '/produtos', icon: Package, label: 'Produtos', permission: null, category: 'registry' },
+  { path: '/fornecedores', icon: Truck, label: 'Fornecedores', permission: null, category: 'registry' },
+  { path: '/equivalencias', icon: Link2, label: 'Equivalências', permission: null, category: 'registry' },
+  { path: '/usuarios', icon: Users, label: 'Usuários', permission: PERM.USUARIOS, category: 'admin' },
 ];
 
-/* Monograma ND em SVG puro — sempre nítido, qualquer fundo */
-function NdMark({ size = 28 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="40" height="40" rx="8" fill="#1E2070" />
-      <text x="50%" y="54%" dominantBaseline="middle" textAnchor="middle"
-        fontFamily="'IBM Plex Sans', Arial Black, sans-serif"
-        fontWeight="800" fontSize="17" letterSpacing="-1" fill="white">ND</text>
-    </svg>
-  );
-}
+const routeTitles = [
+  { match: /^\/$/, eyebrow: 'Central operacional', title: 'Visão geral' },
+  { match: /^\/notas/, eyebrow: 'Recebimento', title: 'Notas fiscais' },
+  { match: /^\/conferencia/, eyebrow: 'Operação', title: 'Conferência' },
+  { match: /^\/vinculacao/, eyebrow: 'Operação', title: 'Vinculação de produtos' },
+  { match: /^\/reconhecimento/, eyebrow: 'Inteligência', title: 'Reconhecimento' },
+  { match: /^\/produtos/, eyebrow: 'Cadastros', title: 'Produtos' },
+  { match: /^\/fornecedores/, eyebrow: 'Cadastros', title: 'Fornecedores' },
+  { match: /^\/equivalencias/, eyebrow: 'Cadastros', title: 'Equivalências' },
+  { match: /^\/usuarios/, eyebrow: 'Administração', title: 'Usuários' },
+];
 
-function Logo({ collapsed }) {
+function Brand({ compact = false }) {
   return (
-    <div className="flex items-center gap-2.5 min-w-0">
-      <NdMark size={28} />
-      {!collapsed && (
-        <div className="min-w-0 leading-none">
-          <p className="text-xs font-black tracking-[0.15em] uppercase text-white leading-tight">NuneDiesel</p>
-          <p className="text-[9px] tracking-widest uppercase text-zinc-500 leading-tight">Auto Pecas</p>
-        </div>
-      )}
+    <div className="flex items-center gap-3 min-w-0">
+      <img src="/nune-logo.png" alt="" className="brand-logo h-9 w-14 object-contain shrink-0" />
+      {!compact && <div className="min-w-0"><p className="text-[15px] font-bold tracking-[0.12em] text-[#101426] uppercase">NuneDiesel</p><p className="text-[9px] font-semibold tracking-[0.18em] text-[#8a91a0] uppercase">Autopeças · Linha pesada</p></div>}
     </div>
   );
 }
@@ -45,115 +41,56 @@ export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { user, logout, hasPermission } = useAuth();
+  const { resolvedTheme, toggleTheme } = useTheme();
+  useEffect(() => setMobileOpen(false), [location.pathname]);
+  const visibleItems = navItems.filter(item => !item.permission || hasPermission(item.permission));
+  const page = routeTitles.find(item => item.match.test(location.pathname)) || routeTitles[0];
 
-  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
-
-  const visibleItems = navItems.filter(i => !i.permission || hasPermission(i.permission));
-
-  const NavLinks = ({ showLabels }) => (
-    <nav className="flex-1 px-2 py-2 space-y-0.5" role="navigation">
-      {visibleItems.map(item => {
-        const isActive = item.path === '/'
-          ? location.pathname === '/'
-          : location.pathname.startsWith(item.path);
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            title={!showLabels ? item.label : undefined}
-            className={`group flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150 relative ${
-              isActive
-                ? 'bg-[#1E2070] text-white'
-                : 'text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-200'
-            }`}
-          >
-            {isActive && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r bg-[#6B75E8]" aria-hidden="true" />
-            )}
-            <item.icon className={`h-4 w-4 flex-shrink-0 transition-colors ${isActive ? 'text-[#9BA8F0]' : 'text-zinc-500 group-hover:text-zinc-300'}`} />
-            {showLabels && <span className="whitespace-nowrap">{item.label}</span>}
-          </Link>
-        );
-      })}
+  const Navigation = ({ labels = true }) => (
+    <nav className="app-nav flex-1 px-3 py-5" aria-label="Navegação principal">
+      {labels && <p className="px-3 mb-3 text-[9px] font-bold tracking-[0.18em] text-[#9aa0ad] uppercase">Operação</p>}
+      <div className="flex flex-col gap-1">
+        {visibleItems.map(item => {
+          const active = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
+          return <Link key={item.path} to={item.path} title={!labels ? item.label : undefined} aria-current={active ? 'page' : undefined} data-category={item.category} className={`app-nav-link ${active ? 'is-active' : ''} ${labels ? '' : 'justify-center'}`}><item.icon className="app-nav-icon h-[18px] w-[18px] shrink-0" />{labels && <span>{item.label}</span>}</Link>;
+        })}
+      </div>
     </nav>
   );
 
-  const UserFooter = ({ showLabels }) => {
-    if (!user) return null;
-    const initial = (user.nome || user.username || '?').charAt(0).toUpperCase();
-    return (
-      <div className="p-3 border-t border-zinc-800">
-        {showLabels ? (
-          <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-full bg-[#1E2070] flex items-center justify-center flex-shrink-0 border border-[#4B52C4]/40">
-              <span className="text-xs font-bold text-white">{initial}</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-zinc-200 truncate leading-tight">{user.nome || user.username}</p>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-wider truncate">{user.role_label || user.role}</p>
-            </div>
-            <button onClick={logout} title="Sair" className="p-1.5 hover:bg-zinc-800 rounded transition-colors" aria-label="Sair">
-              <LogOut className="h-3.5 w-3.5 text-zinc-500 hover:text-zinc-300" />
-            </button>
-          </div>
-        ) : (
-          <button onClick={logout} title="Sair" className="w-full flex justify-center p-1.5 hover:bg-zinc-800 rounded transition-colors" aria-label="Sair">
-            <LogOut className="h-4 w-4 text-zinc-500" />
-          </button>
-        )}
-      </div>
-    );
-  };
+  const UserCard = ({ labels = true }) => user ? (
+    <div className="app-user-card">
+      {labels && <div className="app-user-avatar">{(user.nome || user.username || '?')[0].toUpperCase()}</div>}
+      {labels && <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-[#202538]">{user.nome || user.username}</p><p className="truncate text-[9px] font-bold tracking-wider text-[#8a91a0] uppercase">{user.role_label || user.role}</p></div>}
+      <button onClick={logout} className="app-icon-button" aria-label="Sair" title="Sair"><LogOut className="h-4 w-4" /></button>
+    </div>
+  ) : null;
 
   return (
-    <div className="flex h-screen bg-[#0A0A0A]">
-      {/* Desktop sidebar */}
-      <aside className={`${collapsed ? 'w-14' : 'w-52'} hidden md:flex bg-[#0f0f0f] border-r border-zinc-800/80 flex-col transition-all duration-200 flex-shrink-0`}>
-        <div className="h-14 px-3 flex items-center justify-between border-b border-zinc-800/80">
-          <Logo collapsed={collapsed} />
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 hover:bg-zinc-800 rounded transition-colors ml-auto flex-shrink-0"
-            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-          >
-            {collapsed
-              ? <ChevronRight className="h-3.5 w-3.5 text-zinc-600" />
-              : <ChevronLeft className="h-3.5 w-3.5 text-zinc-600" />}
-          </button>
-        </div>
-        <NavLinks showLabels={!collapsed} />
-        <UserFooter showLabels={!collapsed} />
+    <div className="app-shell flex h-screen overflow-hidden bg-[#f4f5f7] text-[#101426]">
+      <aside className={`${collapsed ? 'w-[76px]' : 'w-[244px]'} hidden md:flex app-sidebar flex-col shrink-0 transition-[width] duration-200`}>
+        <div className="app-sidebar-brand"><Brand compact={collapsed} /><button onClick={() => setCollapsed(v => !v)} className="app-icon-button ml-auto" aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</button></div>
+        <Navigation labels={!collapsed} />
+        <UserCard labels={!collapsed} />
       </aside>
 
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setMobileOpen(false)} aria-hidden="true" />
-          <aside className="absolute left-0 top-0 h-full w-56 bg-[#0f0f0f] border-r border-zinc-800/80 flex flex-col">
-            <div className="h-14 px-4 flex items-center justify-between border-b border-zinc-800/80">
-              <Logo collapsed={false} />
-              <button onClick={() => setMobileOpen(false)} className="p-1.5 hover:bg-zinc-800 rounded transition-colors" aria-label="Fechar menu">
-                <X className="h-4 w-4 text-zinc-400" />
-              </button>
-            </div>
-            <NavLinks showLabels={true} />
-            <UserFooter showLabels={true} />
-          </aside>
-        </div>
-      )}
+      {mobileOpen && <div className="fixed inset-0 z-50 md:hidden"><button className="absolute inset-0 bg-[#101426]/40" onClick={() => setMobileOpen(false)} aria-label="Fechar menu" /><aside className="absolute inset-y-0 left-0 flex w-[270px] app-sidebar flex-col"><div className="app-sidebar-brand"><Brand /><button onClick={() => setMobileOpen(false)} className="app-icon-button ml-auto" aria-label="Fechar menu"><X className="h-4 w-4" /></button></div><Navigation /><UserCard /></aside></div>}
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <div className="md:hidden h-14 sticky top-0 z-30 flex items-center gap-3 bg-[#0f0f0f] border-b border-zinc-800/80 px-4">
-          <button onClick={() => setMobileOpen(true)} className="p-1.5 hover:bg-zinc-800 rounded transition-colors" aria-label="Abrir menu">
-            <Menu className="h-5 w-5 text-zinc-300" />
-          </button>
-          <Logo collapsed={false} />
-        </div>
-        <div className="w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8">
-          {children}
-        </div>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="app-topbar">
+          <button onClick={() => setMobileOpen(true)} className="app-icon-button md:hidden" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button>
+          <div className="min-w-0"><p className="text-[9px] font-bold tracking-[0.17em] text-[#8a91a0] uppercase">{page.eyebrow}</p><p className="truncate text-sm font-semibold text-[#101426]">{page.title}</p></div>
+          <div className="ml-auto flex items-center gap-3">
+            <span className="hidden sm:flex items-center gap-2 text-[10px] font-semibold tracking-wider text-[#737b8d] uppercase"><i className="h-1.5 w-1.5 rounded-full bg-[#e56024]" />Sistema online</span>
+            <div className="hidden sm:block h-6 w-px bg-[#dfe3eb]" />
+            <button onClick={toggleTheme} className="app-icon-button" aria-label={resolvedTheme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} title={resolvedTheme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+              {resolvedTheme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+            </button>
+            <Brand compact />
+          </div>
+        </header>
+        <main className="min-h-0 flex-1 overflow-auto"><div className="app-content mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">{children}</div></main>
+      </div>
     </div>
   );
 }

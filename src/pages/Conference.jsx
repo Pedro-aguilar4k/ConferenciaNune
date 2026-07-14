@@ -335,7 +335,7 @@ function ConferenceGame({ notaId }) {
           onChange={e => setScanValue(e.target.value)} onKeyDown={handleScan}
           placeholder="Leitor ativo - bipe o codigo de barras..."
           autoComplete="off"
-          className="flex-1 bg-transparent font-mono text-zinc-300 focus:outline-none placeholder:text-zinc-700" />
+          className="flex-1 bg-transparent font-mono text-[#101426] focus:outline-none placeholder:text-zinc-500" />
         <span className="text-[10px] uppercase tracking-widest text-green-500">scanner ativo</span>
       </div>
 

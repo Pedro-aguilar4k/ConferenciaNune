@@ -272,6 +272,11 @@ function ConferenceGame({ notaId }) {
   );
   const allComplete = itens.length > 0 && itensCompletos === itens.length;
 
+  const revisao = useMemo(() => {
+    const divergentes = itens.filter(i => Number(i.quantidade_conferida) !== Number(i.quantidade));
+    return { completos: itensCompletos, divergentes };
+  }, [itens, itensCompletos]);
+
   if (!nota) return <div className="text-zinc-500">Carregando...</div>;
 
   const isActive = nota.status === 'em_conferencia';
@@ -333,7 +338,20 @@ function ConferenceGame({ notaId }) {
           <h1 className="font-heading text-xl font-semibold text-[#F4F4F5]">NF-e {nota.numero || '-'}</h1>
           <p className="text-zinc-500 text-xs">{nota.fornecedor_nome}</p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {syncError ? (
+            <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-red-400" title="Reconectando para salvar leituras">
+              <CloudUpload className="h-3.5 w-3.5" /> Salvando ({scansPendentes})
+            </span>
+          ) : scansPendentes > 0 ? (
+            <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-orange-400" title="Salvando leituras em segundo plano">
+              <CloudUpload className="h-3.5 w-3.5 animate-pulse" /> {scansPendentes}
+            </span>
+          ) : (
+            <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-green-500" title="Todas as leituras salvas">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Salvo
+            </span>
+          )}
           <button onClick={handleFinalize}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm transition-colors ${
               allComplete ? 'bg-green-600 text-white hover:bg-green-500' : 'bg-[#1A1A1A] text-zinc-400 border border-zinc-800 hover:bg-zinc-800'
@@ -388,10 +406,16 @@ function ConferenceGame({ notaId }) {
               <span className="font-mono text-lg">Cod. Nota: <span className="text-zinc-300">{activeItem.cprod}</span></span>
               {activeItem.ean && <span className="font-mono text-lg">EAN: <span className="text-zinc-300">{activeItem.ean}</span></span>}
             </div>
-            <button onClick={(e) => { e.stopPropagation(); handleSkip(); }}
-              className="inline-flex items-center gap-2 px-4 py-2 mt-2 bg-[#1A1A1A] border border-zinc-700 text-zinc-400 rounded-md text-sm hover:bg-zinc-800 hover:text-zinc-200 transition-colors">
-              <SkipForward className="h-4 w-4" /> Pular (sem quantidade)
-            </button>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <button onClick={(e) => { e.stopPropagation(); openAddBarcode(); }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600/15 border border-orange-500/40 text-orange-300 rounded-md text-sm hover:bg-orange-600/25 transition-colors">
+                <Barcode className="h-4 w-4" /> Adicionar codigo de barras
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleSkip(); }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#1A1A1A] border border-zinc-700 text-zinc-400 rounded-md text-sm hover:bg-zinc-800 hover:text-zinc-200 transition-colors">
+                <SkipForward className="h-4 w-4" /> Pular
+              </button>
+            </div>
           </div>
         ) : allComplete ? (
           <div className="space-y-5">
@@ -422,53 +446,122 @@ function ConferenceGame({ notaId }) {
         <span className="text-[10px] uppercase tracking-widest text-green-500">scanner ativo</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-        {itens.map(item => {
-          const complete = item.quantidade > 0 && item.quantidade_conferida >= item.quantidade;
-          const partial = !complete && item.quantidade_conferida > 0;
-          const active = activeItem?.id === item.id;
-          return (
-            <div key={item.id}
-              className={`rounded-md border p-2.5 text-left ${
-                active ? 'border-blue-500 bg-blue-500/10' :
-                complete ? 'border-green-500/40 bg-green-500/5' :
-                partial ? 'border-yellow-500/40 bg-yellow-500/5' :
-                'border-[#27272A] bg-[#121212]'
-              }`}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-sm text-[#F4F4F5] truncate">{item.produto_interno_codigo}</span>
-                <span className={`font-mono text-xs shrink-0 ${complete ? 'text-green-400' : partial ? 'text-yellow-400' : 'text-zinc-500'}`}>
-                  {Number(item.quantidade_conferida)}/{Number(item.quantidade)}
-                </span>
-              </div>
-              <p className="text-[11px] text-zinc-500 truncate mt-0.5">{item.produto_interno_descricao || item.descricao_nfe}</p>
-            </div>
-          );
-        })}
+      <div>
+        <p className="text-[11px] text-zinc-600 mb-2">Clique em um produto para seleciona-lo e, se precisar, adicionar o codigo de barras que faltou no XML.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {itens.map(item => {
+            const complete = item.quantidade > 0 && item.quantidade_conferida >= item.quantidade;
+            const partial = !complete && item.quantidade_conferida > 0;
+            const active = activeItem?.id === item.id;
+            return (
+              <button type="button" key={item.id}
+                onClick={(e) => { e.stopPropagation(); handleSelectItem(item); }}
+                className={`rounded-md border p-2.5 text-left transition-colors hover:border-orange-500/60 ${
+                  active ? 'border-blue-500 bg-blue-500/10' :
+                  complete ? 'border-green-500/40 bg-green-500/5' :
+                  partial ? 'border-yellow-500/40 bg-yellow-500/5' :
+                  'border-[#27272A] bg-[#121212]'
+                }`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-sm text-[#F4F4F5] truncate">{item.produto_interno_codigo}</span>
+                  <span className={`font-mono text-xs shrink-0 ${complete ? 'text-green-400' : partial ? 'text-yellow-400' : 'text-zinc-500'}`}>
+                    {Number(item.quantidade_conferida)}/{Number(item.quantidade)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 truncate mt-0.5">{item.produto_interno_descricao || item.descricao_nfe}</p>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <Dialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
+      <Dialog open={addBarcodeOpen} onOpenChange={setAddBarcodeOpen}>
         <DialogContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Finalizar Conferencia</DialogTitle>
+            <DialogTitle className="text-xl flex items-center gap-2"><Barcode className="h-5 w-5 text-orange-400" /> Adicionar codigo de barras</DialogTitle>
             <DialogDescription className="text-zinc-500">
-              Informe o nome do estoquista responsavel pela conferencia. Essa informacao sera registrada no relatorio.
+              Bipe o codigo de barras do produto <span className="text-[#F4F4F5] font-mono">{activeItem?.produto_interno_codigo}</span>. Ele sera salvo no cadastro e contara +1 nesta conferencia.
             </DialogDescription>
           </DialogHeader>
+          <div>
+            <label className="text-[11px] uppercase tracking-[0.15em] text-[#71717A] mb-2 block">Codigo de barras</label>
+            <input ref={addBarcodeRef} value={addBarcodeValue}
+              onChange={e => setAddBarcodeValue(e.target.value)}
+              onKeyDown={handleAddBarcode}
+              placeholder="Bipe ou digite o codigo..."
+              autoComplete="off"
+              className="w-full text-lg p-3 bg-black text-white font-mono border-2 border-orange-500/30 rounded-md focus:border-orange-500 focus:outline-none placeholder:text-zinc-700" />
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={() => setAddBarcodeOpen(false)}
+              className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors">Cancelar</button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reviewOpen} onOpenChange={(v) => { if (!finalizing) setReviewOpen(v); }}>
+        <DialogContent className="bg-[#121212] border-[#27272A] text-[#F4F4F5] max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2"><ClipboardList className="h-5 w-5 text-green-400" /> Revisao final</DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              Confira as quantidades antes de gerar o relatorio. Nada e gravado ate voce confirmar.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-md border border-[#27272A] bg-[#0A0A0A] p-3">
+              <p className="text-2xl font-mono font-bold text-[#F4F4F5]">{itens.length}</p>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1">Itens</p>
+            </div>
+            <div className="rounded-md border border-green-500/30 bg-green-500/5 p-3">
+              <p className="text-2xl font-mono font-bold text-green-400">{revisao.completos}</p>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1">Conferidos</p>
+            </div>
+            <div className={`rounded-md border p-3 ${revisao.divergentes.length ? 'border-red-500/30 bg-red-500/5' : 'border-[#27272A] bg-[#0A0A0A]'}`}>
+              <p className={`text-2xl font-mono font-bold ${revisao.divergentes.length ? 'text-red-400' : 'text-[#F4F4F5]'}`}>{revisao.divergentes.length}</p>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1">Divergencias</p>
+            </div>
+          </div>
+
+          {revisao.divergentes.length > 0 && (
+            <div className="max-h-48 overflow-auto rounded-md border border-[#27272A] divide-y divide-[#1A1A1A]">
+              {revisao.divergentes.map(it => {
+                const diff = Number(it.quantidade_conferida) - Number(it.quantidade);
+                return (
+                  <div key={it.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="font-mono text-sm text-[#F4F4F5] truncate">{it.produto_interno_codigo}</p>
+                      <p className="text-[11px] text-zinc-500 truncate">{it.produto_interno_descricao || it.descricao_nfe}</p>
+                    </div>
+                    <span className="font-mono text-sm text-red-400 shrink-0">
+                      {Number(it.quantidade_conferida)}/{Number(it.quantidade)} ({diff > 0 ? '+' : ''}{diff})
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {scansPendentes > 0 && (
+            <p className="text-[11px] text-orange-400 flex items-center gap-1.5">
+              <CloudUpload className="h-3.5 w-3.5 animate-pulse" /> {scansPendentes} leitura(s) sendo salva(s). Ao confirmar, aguardaremos o salvamento.
+            </p>
+          )}
+
           <div>
             <label className="text-[11px] uppercase tracking-[0.15em] text-[#71717A] mb-2 block">Nome do Estoquista</label>
             <input value={operadorNome} autoFocus
               onChange={e => setOperadorNome(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && operadorNome.trim()) handleConfirmFinalize(); }}
               placeholder="Digite seu nome..."
-              className="w-full text-lg p-3 bg-black text-white border-2 border-blue-500/20 rounded-md focus:border-blue-500 focus:outline-none placeholder:text-zinc-700" />
+              className="w-full text-lg p-3 bg-black text-white border-2 border-green-500/20 rounded-md focus:border-green-500 focus:outline-none placeholder:text-zinc-700" />
           </div>
           <div className="flex justify-end gap-2 mt-2">
-            <button onClick={() => setFinalizeDialogOpen(false)}
-              className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors">Cancelar</button>
-            <button onClick={handleConfirmFinalize} disabled={!operadorNome.trim()}
+            <button onClick={() => setReviewOpen(false)} disabled={finalizing}
+              className="px-4 py-2 text-sm text-zinc-400 hover:text-[#F4F4F5] transition-colors disabled:opacity-50">Voltar</button>
+            <button onClick={handleConfirmFinalize} disabled={!operadorNome.trim() || finalizing}
               className="px-5 py-2 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-500 disabled:opacity-50 transition-colors">
-              Finalizar e Gerar Relatorio
+              {finalizing ? 'Salvando...' : 'Confirmar e Gerar Relatorio'}
             </button>
           </div>
         </DialogContent>

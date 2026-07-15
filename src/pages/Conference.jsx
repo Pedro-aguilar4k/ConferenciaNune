@@ -85,6 +85,7 @@ function ConferenceGame({ notaId }) {
   }, []);
 
   const onScanResult = useCallback((data) => {
+    console.log("[v0] onScanResult", { success: data?.success, tipo: data?.tipo, itemId: data?.item?.id, qtd: data?.item?.quantidade_conferida });
     if (data?.item) reconcileItem(data.item);
     if (data?.tipo === 'duplicado_ignorado') return; // replay silencioso após recuperação
     clearTimeout(completeTimer.current);

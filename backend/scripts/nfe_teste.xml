@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe35240600000000000199550010000012341000012340" versao="4.00">
+      <ide>
+        <nNF>12345</nNF>
+        <serie>1</serie>
+        <dhEmi>2026-07-14T10:00:00-03:00</dhEmi>
+      </ide>
+      <emit>
+        <CNPJ>12345678000199</CNPJ>
+        <xNome>DISTRIBUIDORA DIESEL TESTE LTDA</xNome>
+      </emit>
+      <det nItem="1">
+        <prod>
+          <cProd>F001</cProd>
+          <cEAN>7890000000017</cEAN>
+          <xProd>FILTRO DE OLEO MOTOR</xProd>
+          <NCM>84212300</NCM>
+          <CFOP>5102</CFOP>
+          <qCom>3</qCom>
+          <uCom>UN</uCom>
+          <vUnCom>25.00</vUnCom>
+          <vProd>75.00</vProd>
+        </prod>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>F002</cProd>
+          <cEAN>7890000000024</cEAN>
+          <xProd>CORREIA DENTADA REFORCADA</xProd>
+          <NCM>40103100</NCM>
+          <CFOP>5102</CFOP>
+          <qCom>2</qCom>
+          <uCom>UN</uCom>
+          <vUnCom>120.00</vUnCom>
+          <vProd>240.00</vProd>
+        </prod>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>F003</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>RETENTOR CUBO RODA DIANTEIRA</xProd>
+          <NCM>84842000</NCM>
+          <CFOP>5102</CFOP>
+          <qCom>1</qCom>
+          <uCom>UN</uCom>
+          <vUnCom>45.00</vUnCom>
+          <vProd>45.00</vProd>
+        </prod>
+      </det>
+      <total>
+        <ICMSTot>
+          <vNF>360.00</vNF>
+        </ICMSTot>
+      </total>
+    </infNFe>
+  </NFe>
+</nfeProc>

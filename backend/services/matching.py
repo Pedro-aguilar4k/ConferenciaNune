@@ -99,7 +99,7 @@ async def match_product(db, Produto, item_desc: str, item_ean, item_cprod: str,
     from datetime import datetime, timezone
 
     if item_ean and item_ean not in ('SEM GTIN', '', 'None', '0'):
-        product = await db.produtos.find_one({'ean': item_ean, 'ativo': True})
+        product = await db.produtos.find_one({'$or': [{'ean': item_ean}, {'codigos_barras': item_ean}], 'ativo': True})
         if product:
             p = Produto.from_mongo(product)
             return {

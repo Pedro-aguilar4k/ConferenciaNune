@@ -4,13 +4,13 @@ import { useState } from "react"
 import useSWR from "swr"
 import { toast } from "sonner"
 import {
-  listProdutos,
-  createProduto,
-  updateProduto,
-  deleteProduto,
-  type Produto,
-  type ProdutoInput,
-} from "@/app/actions/produtos"
+  listFornecedores,
+  createFornecedor,
+  updateFornecedor,
+  deleteFornecedor,
+  type Fornecedor,
+  type FornecedorInput,
+} from "@/app/actions/fornecedores"
 import { Button } from "@/components/ui/button"
 import { AtivoBadge } from "@/components/status-badge"
 import { SearchBar } from "@/components/search-bar"
@@ -24,15 +24,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Plus } from "lucide-react"
-import { ProdutoDialog } from "./produto-dialog"
+import { FornecedorDialog } from "./fornecedor-dialog"
 
-export function ProdutosManager({ canManage }: { canManage: boolean }) {
+function formatCnpj(cnpj: string | null) {
+  if (!cnpj) return "—"
+  if (cnpj.length !== 14) return cnpj
+  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
+}
+
+export function FornecedoresManager({ canManage }: { canManage: boolean }) {
   const [q, setQ] = useState("")
   const [page, setPage] = useState(1)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<Produto | null>(null)
+  const [editing, setEditing] = useState<Fornecedor | null>(null)
 
-  const { data, isLoading, mutate } = useSWR(["produtos", q, page], () => listProdutos({ q, page }), {
+  const { data, isLoading, mutate } = useSWR(["fornecedores", q, page], () => listFornecedores({ q, page }), {
     keepPreviousData: true,
   })
 
@@ -42,15 +48,15 @@ export function ProdutosManager({ canManage }: { canManage: boolean }) {
     setEditing(null)
     setDialogOpen(true)
   }
-  function openEdit(p: Produto) {
-    setEditing(p)
+  function openEdit(f: Fornecedor) {
+    setEditing(f)
     setDialogOpen(true)
   }
 
-  async function handleSubmit(input: ProdutoInput) {
-    const res = editing ? await updateProduto(editing.id, input) : await createProduto(input)
+  async function handleSubmit(input: FornecedorInput) {
+    const res = editing ? await updateFornecedor(editing.id, input) : await createFornecedor(input)
     if (res.ok) {
-      toast.success(editing ? "Produto atualizado." : "Produto criado.")
+      toast.success(editing ? "Fornecedor atualizado." : "Fornecedor criado.")
       setDialogOpen(false)
       mutate()
     } else {
@@ -59,11 +65,11 @@ export function ProdutosManager({ canManage }: { canManage: boolean }) {
     return res.ok
   }
 
-  async function handleDelete(p: Produto) {
-    if (!confirm(`Remover o produto "${p.descricao}"?`)) return
-    const res = await deleteProduto(p.id)
+  async function handleDelete(f: Fornecedor) {
+    if (!confirm(`Remover o fornecedor "${f.razaoSocial}"?`)) return
+    const res = await deleteFornecedor(f.id)
     if (res.ok) {
-      toast.success("Produto removido.")
+      toast.success("Fornecedor removido.")
       mutate()
     } else {
       toast.error(res.error)
@@ -79,12 +85,12 @@ export function ProdutosManager({ canManage }: { canManage: boolean }) {
             setQ(v)
             setPage(1)
           }}
-          placeholder="Buscar por descrição, código ou EAN..."
+          placeholder="Buscar por razão social, fantasia ou CNPJ..."
         />
         {canManage ? (
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Novo produto
+            Novo fornecedor
           </Button>
         ) : null}
       </div>
@@ -93,11 +99,10 @@ export function ProdutosManager({ canManage }: { canManage: boolean }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Fabricante</TableHead>
-              <TableHead>EAN</TableHead>
-              <TableHead className="text-right">Estoque</TableHead>
+              <TableHead>Razão social</TableHead>
+              <TableHead>Nome fantasia</TableHead>
+              <TableHead>CNPJ</TableHead>
+              <TableHead>Contato</TableHead>
               <TableHead>Status</TableHead>
               {canManage ? <TableHead className="w-12 text-right">Ações</TableHead> : null}
             </TableRow>
@@ -105,26 +110,25 @@ export function ProdutosManager({ canManage }: { canManage: boolean }) {
           <TableBody>
             {isLoading && rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                  Nenhum produto encontrado.
+                <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  Nenhum fornecedor encontrado.
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-sm">{p.codigoInterno}</TableCell>
-                  <TableCell className="font-medium">{p.descricao}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.fabricante ?? "—"}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{p.codigoBarras ?? "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{p.estoqueAtual ?? 0}</TableCell>
+              rows.map((f) => (
+                <TableRow key={f.id}>
+                  <TableCell className="font-medium">{f.razaoSocial}</TableCell>
+                  <TableCell className="text-muted-foreground">{f.nomeFantasia ?? "—"}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{formatCnpj(f.cnpj)}</TableCell>
+                  <TableCell className="text-muted-foreground">{f.email ?? f.telefone ?? "—"}</TableCell>
                   <TableCell>
-                    <AtivoBadge ativo={p.ativo} />
+                    <AtivoBadge ativo={f.ativo} />
                   </TableCell>
                   {canManage ? (
                     <TableCell className="text-right">
@@ -136,9 +140,9 @@ export function ProdutosManager({ canManage }: { canManage: boolean }) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(p)}>Editar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEdit(f)}>Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(p)}>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(f)}>
                             Remover
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -158,7 +162,7 @@ export function ProdutosManager({ canManage }: { canManage: boolean }) {
         />
       </div>
 
-      <ProdutoDialog open={dialogOpen} onOpenChange={setDialogOpen} produto={editing} onSubmit={handleSubmit} />
+      <FornecedorDialog open={dialogOpen} onOpenChange={setDialogOpen} fornecedor={editing} onSubmit={handleSubmit} />
     </>
   )
 }

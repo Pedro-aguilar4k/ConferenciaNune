@@ -2,12 +2,12 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { relatoriosConferencia } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
-import { requirePermission } from "@/lib/guards"
+import { requireAnyPermission } from "@/lib/guards"
 
 // Entrega o arquivo .txt salvo (fonte de verdade do relatório).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requirePermission("conferir")
+    await requireAnyPermission("conferir", "relatorios")
   } catch {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }

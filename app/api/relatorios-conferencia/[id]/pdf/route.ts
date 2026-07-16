@@ -3,12 +3,12 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 import { db } from "@/lib/db"
 import { relatoriosConferencia } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
-import { requirePermission } from "@/lib/guards"
+import { requireAnyPermission } from "@/lib/guards"
 
 // Reconstrói o PDF de impressão a partir do TXT salvo (fonte de verdade).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requirePermission("conferir")
+    await requireAnyPermission("conferir", "relatorios")
   } catch {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }

@@ -25,3 +25,14 @@ export async function requirePermission(permission: Permission): Promise<Actor> 
   }
   return actor
 }
+
+/**
+ * Garante que o usuário tem ao menos uma das permissões informadas.
+ */
+export async function requireAnyPermission(...permissions: Permission[]): Promise<Actor> {
+  const actor = await requireActor()
+  if (!permissions.some((p) => roleHasPermission(actor.role, p))) {
+    throw new Error("Você não tem permissão para esta ação.")
+  }
+  return actor
+}

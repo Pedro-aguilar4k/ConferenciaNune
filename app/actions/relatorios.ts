@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db"
 import { notas } from "@/lib/db/schema"
-import { and, gte, lte, eq, desc, sql } from "drizzle-orm"
+import { and, gte, lte, eq, desc, sql, ilike } from "drizzle-orm"
 import { requirePermission } from "@/lib/guards"
 
 export type RelatorioNota = {
@@ -21,11 +21,13 @@ export async function getRelatorioNotas(input?: {
   status?: string
   de?: string
   ate?: string
+  numero?: string
 }): Promise<{ notas: RelatorioNota[]; resumo: { total: number; conferidas: number; divergentes: number; itens: number } }> {
   await requirePermission("relatorios")
 
   const conds = []
   if (input?.status && input.status !== "todos") conds.push(eq(notas.status, input.status))
+  if (input?.numero?.trim()) conds.push(ilike(notas.numero, `%${input.numero.trim()}%`))
   if (input?.de) conds.push(gte(notas.createdAt, new Date(input.de)))
   if (input?.ate) {
     const ate = new Date(input.ate)

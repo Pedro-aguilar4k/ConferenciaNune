@@ -1,66 +1,82 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { PackageCheck } from "lucide-react"
+import Image from "next/image"
+import { usePathname, useRouter } from "next/navigation"
+import { LogOut } from "lucide-react"
+import { authClient } from "@/lib/auth-client"
 import { NAV_ITEMS, GROUP_LABELS, type NavItem } from "@/lib/navigation"
-import { roleHasPermission } from "@/lib/permissions"
+import { roleHasPermission, ROLE_LABELS, type Role } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
+import type { SessionUser } from "@/lib/session"
 
-export function AppSidebar({ role, onNavigate }: { role: string; onNavigate?: () => void }) {
+export function AppSidebar({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
   const pathname = usePathname()
-  const allowed = NAV_ITEMS.filter((item) => roleHasPermission(role, item.permission))
+  const router = useRouter()
+  const allowed = NAV_ITEMS.filter((item) => roleHasPermission(user.role, item.permission))
 
   const groups = allowed.reduce<Record<string, NavItem[]>>((acc, item) => {
     ;(acc[item.group] ??= []).push(item)
     return acc
   }, {})
 
+  const handleLogout = async () => {
+    await authClient.signOut()
+    router.push("/login")
+    router.refresh()
+  }
+
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href))
+
   return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center gap-3 px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-brand text-accent-brand-foreground">
-          <PackageCheck className="h-5 w-5" aria-hidden="true" />
-        </div>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold">Conferência</p>
-          <p className="text-xs text-sidebar-foreground/60">Gestão de NF-e</p>
+    <div className="app-shell flex h-full flex-col app-sidebar">
+      <div className="app-sidebar-brand">
+        <Image src="/nune-logo.png" alt="" width={52} height={34} className="brand-logo h-9 w-14 shrink-0 object-contain" />
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold uppercase tracking-[0.12em] text-[#101426]">NuneDiesel</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#8a91a0]">Autopeças · Linha pesada</p>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5" aria-label="Navegação principal">
         {(Object.keys(groups) as NavItem["group"][]).map((group) => (
           <div key={group}>
-            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/40">
-              {GROUP_LABELS[group]}
-            </p>
-            <ul className="space-y-1">
+            <p className="app-nav-label">{GROUP_LABELS[group]}</p>
+            <div className="flex flex-col gap-1">
               {groups[group].map((item) => {
-                const active = pathname === item.href
+                const active = isActive(item.href)
                 const Icon = item.icon
                 return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                        active
-                          ? "bg-accent-brand text-accent-brand-foreground"
-                          : "text-sidebar-foreground/75 hover:bg-white/10 hover:text-sidebar-foreground",
-                      )}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      {item.label}
-                    </Link>
-                  </li>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    data-category={item.category}
+                    className={cn("app-nav-link", active && "is-active")}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <Icon className="app-nav-icon h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </Link>
                 )
               })}
-            </ul>
+            </div>
           </div>
         ))}
       </nav>
+
+      <div className="app-user-card">
+        <div className="app-user-avatar">{(user.name || user.username || "?")[0]?.toUpperCase()}</div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-[#202538]">{user.name || user.username}</p>
+          <p className="truncate text-[9px] font-bold uppercase tracking-wider text-[#8a91a0]">
+            {ROLE_LABELS[user.role as Role]}
+          </p>
+        </div>
+        <button onClick={handleLogout} className="app-icon-button" aria-label="Sair" title="Sair">
+          <LogOut className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   )
 }

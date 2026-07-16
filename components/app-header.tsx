@@ -1,80 +1,72 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { authClient } from "@/lib/auth-client"
+import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
+import Image from "next/image"
+import { useTheme } from "next-themes"
 import { AppSidebar } from "@/components/app-sidebar"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
-import { ROLE_LABELS, type Role } from "@/lib/permissions"
-import { LogOut, Menu, User } from "lucide-react"
+import { Menu, Moon, Sun } from "lucide-react"
 import type { SessionUser } from "@/lib/session"
 
-export function AppHeader({ user }: { user: SessionUser }) {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const initials = user.name.slice(0, 2).toUpperCase()
+const ROUTE_TITLES: { match: RegExp; eyebrow: string; title: string }[] = [
+  { match: /^\/$/, eyebrow: "Central operacional", title: "Visão geral" },
+  { match: /^\/importar/, eyebrow: "Recebimento", title: "Importar NF-e" },
+  { match: /^\/conferencia/, eyebrow: "Operação", title: "Conferência" },
+  { match: /^\/reconhecimento/, eyebrow: "Inteligência", title: "Reconhecimento" },
+  { match: /^\/produtos/, eyebrow: "Cadastros", title: "Produtos" },
+  { match: /^\/fornecedores/, eyebrow: "Cadastros", title: "Fornecedores" },
+  { match: /^\/equivalencias/, eyebrow: "Cadastros", title: "Equivalências" },
+  { match: /^\/relatorios/, eyebrow: "Gestão", title: "Relatórios" },
+  { match: /^\/usuarios/, eyebrow: "Administração", title: "Usuários" },
+]
 
-  const handleLogout = async () => {
-    await authClient.signOut()
-    router.push("/login")
-    router.refresh()
-  }
+export function AppHeader({ user }: { user: SessionUser }) {
+  const pathname = usePathname()
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => setMounted(true), [])
+  const isDark = mounted && resolvedTheme === "dark"
+
+  const page = ROUTE_TITLES.find((r) => r.match.test(pathname)) ?? ROUTE_TITLES[0]
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-4 md:px-6">
-      <div className="flex items-center gap-3">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0">
-            <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-            <AppSidebar role={user.role} onNavigate={() => setOpen(false)} />
-          </SheetContent>
-        </Sheet>
+    <header className="app-shell app-topbar sticky top-0 z-30">
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <button className="app-icon-button md:hidden" aria-label="Abrir menu">
+            <Menu className="h-5 w-5" />
+          </button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-[270px] p-0">
+          <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+          <AppSidebar user={user} onNavigate={() => setOpen(false)} />
+        </SheetContent>
+      </Sheet>
+
+      <div className="min-w-0">
+        <p className="text-[9px] font-bold uppercase tracking-[0.17em] text-[#8a91a0]">{page.eyebrow}</p>
+        <p className="truncate text-sm font-semibold text-[#101426]">{page.title}</p>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="flex items-center gap-2 px-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-              {initials}
-            </span>
-            <span className="hidden text-left leading-tight sm:block">
-              <span className="block text-sm font-medium text-foreground">{user.name}</span>
-              <span className="block text-xs text-muted-foreground">{ROLE_LABELS[user.role as Role]}</span>
-            </span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuLabel>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">{user.name}</span>
-              <span className="text-xs font-normal text-muted-foreground">@{user.username}</span>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem disabled>
-            <User className="mr-2 h-4 w-4" />
-            {ROLE_LABELS[user.role as Role]}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="ml-auto flex items-center gap-3">
+        <span className="hidden items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-[#737b8d] sm:flex">
+          <i className="app-online-dot" aria-hidden="true" />
+          Sistema online
+        </span>
+        <div className="hidden h-6 w-px bg-[#dfe3eb] sm:block" />
+        <button
+          onClick={() => setTheme(isDark ? "light" : "dark")}
+          className="app-icon-button"
+          aria-label={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
+          title={isDark ? "Tema claro" : "Tema escuro"}
+        >
+          {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+        </button>
+        <Image src="/nune-logo.png" alt="" width={44} height={30} className="brand-logo hidden h-7 w-11 object-contain sm:block" />
+      </div>
     </header>
   )
 }

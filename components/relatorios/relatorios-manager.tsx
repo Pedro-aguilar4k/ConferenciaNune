@@ -24,7 +24,7 @@ import {
 import { NotaStatusBadge } from "@/components/status-badge"
 import { getRelatorioNotas } from "@/app/actions/relatorios"
 
-type Filtros = { status: string; de: string; ate: string }
+type Filtros = { numero: string; status: string; de: string; ate: string }
 
 function fmtDate(d: Date | string) {
   return new Date(d).toLocaleDateString("pt-BR")
@@ -35,12 +35,17 @@ function fmtMoeda(v: string | null) {
 }
 
 export function RelatoriosManager() {
-  const [filtros, setFiltros] = useState<Filtros>({ status: "todos", de: "", ate: "" })
+  const [filtros, setFiltros] = useState<Filtros>({ numero: "", status: "todos", de: "", ate: "" })
   const [applied, setApplied] = useState<Filtros>(filtros)
   const [, startTransition] = useTransition()
 
   const { data, isLoading } = useSWR(["relatorio", applied], () =>
-    getRelatorioNotas({ status: applied.status, de: applied.de || undefined, ate: applied.ate || undefined }),
+    getRelatorioNotas({
+      numero: applied.numero || undefined,
+      status: applied.status,
+      de: applied.de || undefined,
+      ate: applied.ate || undefined,
+    }),
   )
 
   function aplicar() {
@@ -78,6 +83,20 @@ export function RelatoriosManager() {
     <div className="flex flex-col gap-4">
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 p-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted-foreground">Número da nota</label>
+            <Input
+              type="search"
+              inputMode="numeric"
+              placeholder="Ex: 1234"
+              value={filtros.numero}
+              onChange={(e) => setFiltros((f) => ({ ...f, numero: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) aplicar()
+              }}
+              className="w-40"
+            />
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted-foreground">Status</label>
             <Select value={filtros.status} onValueChange={(v) => setFiltros((f) => ({ ...f, status: v }))}>

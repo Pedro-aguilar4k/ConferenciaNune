@@ -162,6 +162,12 @@ export async function listNotas(params?: { search?: string; status?: string }): 
     conditions.push(eq(notas.status, status))
   }
 
+  // Notas conferidas/divergentes somem da aba de importação após 24h
+  // (o histórico permanece disponível na aba de Relatórios).
+  conditions.push(
+    sql`NOT (${notas.status} IN ('conferida', 'divergente') AND ${notas.conferidaEm} IS NOT NULL AND ${notas.conferidaEm} < now() - interval '24 hours')`,
+  )
+
   return db
     .select({
       id: notas.id,

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react"
 import useSWR from "swr"
 import Link from "next/link"
-import { Upload, FileText, Loader2, Trash2, Eye } from "lucide-react"
+import { Upload, FileText, Loader2, Trash2, Eye, ClipboardList } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -201,11 +201,25 @@ export function ImportManager() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button asChild size="icon" variant="ghost" className="h-8 w-8">
-                          <Link href={`/conferencia/${n.id}`} aria-label="Conferir nota">
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                        {n.status === "conferida" || n.status === "divergente" ? (
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1.5 px-2.5 text-xs"
+                          >
+                            <Link href={`/conferencia/${n.id}`} aria-label="Ver relatório da nota">
+                              <ClipboardList className="h-3.5 w-3.5" />
+                              Relatório
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button asChild size="icon" variant="ghost" className="h-8 w-8">
+                            <Link href={`/conferencia/${n.id}`} aria-label="Conferir nota">
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"

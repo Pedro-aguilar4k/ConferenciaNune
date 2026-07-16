@@ -38,20 +38,17 @@ export async function bootstrapAdmin(formData: {
 
   try {
     // Better Auth exige um email internamente; geramos um sintético a partir do username.
-    await auth.api.signUpEmail({
+    // Usamos o endpoint admin createUser SEM headers: quando não há sessão nem request,
+    // o Better Auth permite a criação (ideal para o bootstrap do primeiro admin).
+    await auth.api.createUser({
       body: {
         name,
         email: `${username}@conferencia.local`,
         password: formData.password,
-        username,
+        role: "admin",
+        data: { username, displayUsername: formData.username.trim() },
       },
     })
-
-    // Promove o usuário recém-criado a admin.
-    await db
-      .update(user)
-      .set({ role: "admin" })
-      .where(sql`${user.username} = ${username}`)
 
     return { ok: true }
   } catch (e) {

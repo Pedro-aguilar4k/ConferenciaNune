@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db"
 import { notas, itensNota, produtos, relatoriosConferencia } from "@/lib/db/schema"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, and, ilike } from "drizzle-orm"
 import { requirePermission } from "@/lib/guards"
 
 function qty(v: string | null | undefined): number {
@@ -171,6 +171,32 @@ export async function gerarRelatorioConferencia(input: {
     .returning({ id: relatoriosConferencia.id })
 
   return { ok: true, id: row.id }
+}
+
+/** Lista todos os relatórios gerados, com filtro opcional por número da nota. */
+export async function listTodosRelatorios(input?: { numero?: string }): Promise<RelatorioResumo[]> {
+  await requirePermission("relatorios")
+  const conds = []
+  if (input?.numero?.trim()) conds.push(ilike(relatoriosConferencia.numeroNota, `%${input.numero.trim()}%`))
+  const rows = await db
+    .select({
+      id: relatoriosConferencia.id,
+      notaId: relatoriosConferencia.notaId,
+      numeroNota: relatoriosConferencia.numeroNota,
+      fornecedorNome: relatoriosConferencia.fornecedorNome,
+      estoquista: relatoriosConferencia.estoquista,
+      status: relatoriosConferencia.status,
+      totalItens: relatoriosConferencia.totalItens,
+      itensConferidos: relatoriosConferencia.itensConferidos,
+      itensDivergentes: relatoriosConferencia.itensDivergentes,
+      createdByNome: relatoriosConferencia.createdByNome,
+      createdAt: relatoriosConferencia.createdAt,
+    })
+    .from(relatoriosConferencia)
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(desc(relatoriosConferencia.createdAt))
+    .limit(200)
+  return rows
 }
 
 /** Lista os relatórios já gerados para uma nota. */

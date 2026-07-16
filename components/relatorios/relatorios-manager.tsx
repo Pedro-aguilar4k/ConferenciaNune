@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select"
 import { NotaStatusBadge } from "@/components/status-badge"
 import { getRelatorioNotas } from "@/app/actions/relatorios"
+import { RelatoriosConferenciaList } from "@/components/relatorios/relatorios-conferencia-list"
 
 type Filtros = { numero: string; status: string; de: string; ate: string }
 
@@ -221,6 +222,8 @@ export function RelatoriosManager() {
           </Table>
         </div>
       </Card>
+
+      <RelatoriosConferenciaList numero={applied.numero} />
     </div>
   )
 }

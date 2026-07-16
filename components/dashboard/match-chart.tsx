@@ -16,7 +16,7 @@ const LABELS: Record<string, string> = {
 }
 
 const chartConfig: ChartConfig = {
-  total: { label: "Itens", color: "var(--chart-1)" },
+  total: { label: "Itens", color: "hsl(var(--chart-1))" },
 }
 
 export function MatchChart({ data }: { data: { metodo: string; total: number }[] }) {

@@ -238,3 +238,27 @@ export const historicoLeituras = pgTable(
     notaScanIdx: uniqueIndex("historico_leituras_nota_scan_idx").on(t.notaId, t.scanUuid),
   }),
 )
+
+// Relatorio de conferencia gerado ao finalizar a nota. O conteudo em texto e
+// a fonte de verdade; o PDF de impressao e reconstruido a partir dele.
+export const relatoriosConferencia = pgTable(
+  "relatorios_conferencia",
+  {
+    id: serial("id").primaryKey(),
+    notaId: integer("nota_id").notNull(),
+    numeroNota: text("numero_nota"),
+    fornecedorNome: text("fornecedor_nome"),
+    estoquista: text("estoquista").notNull(),
+    status: text("status").notNull(), // conferida | divergente
+    totalItens: integer("total_itens").notNull().default(0),
+    itensConferidos: integer("itens_conferidos").notNull().default(0),
+    itensDivergentes: integer("itens_divergentes").notNull().default(0),
+    conteudoTxt: text("conteudo_txt").notNull(),
+    createdBy: text("created_by"),
+    createdByNome: text("created_by_nome"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    notaIdIdx: index("relatorios_conferencia_nota_id_idx").on(t.notaId),
+  }),
+)

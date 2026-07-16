@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
 import {
@@ -20,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { ItemStatusBadge } from "@/components/status-badge"
 import { ProdutoCombobox } from "@/components/conferencia/produto-combobox"
+import { ConferenciaRelatorio } from "@/components/conferencia/conferencia-relatorio"
 import {
   processarLeitura,
   adicionarCodigoItem,
@@ -96,7 +96,6 @@ const FEEDBACK: Record<
 }
 
 export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaData; canBind: boolean }) {
-  const router = useRouter()
   const [itens, setItens] = useState<GameItem[]>(initial.itens)
   const [progress, setProgress] = useState(initial.progress)
   const [status, setStatus] = useState(initial.nota.status)
@@ -104,6 +103,10 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState<LeituraResult | null>(null)
   const [activeId, setActiveId] = useState<number | null>(null)
+  // Se a nota já foi finalizada, abre direto no relatório.
+  const [finalizado, setFinalizado] = useState(
+    initial.nota.status === "conferida" || initial.nota.status === "divergente",
+  )
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Refs para acessar o estado mais recente dentro do loop da fila.
@@ -229,8 +232,29 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
     const res = await finalizarConferencia(initial.nota.id)
     if (res.ok) {
       toast.success(res.status === "conferida" ? "Nota conferida com sucesso!" : "Nota finalizada com divergências.")
-      router.push("/conferencia")
+      setStatus(res.status)
+      setFinalizado(true)
     }
+  }
+
+  // Conferência finalizada: mostra a etapa de relatório.
+  if (finalizado) {
+    return (
+      <ConferenciaRelatorio
+        nota={{ id: initial.nota.id, numero: initial.nota.numero, fornecedorNome: initial.nota.fornecedorNome }}
+        itens={itens.map((i) => ({
+          id: i.id,
+          produtoCodigo: i.produtoCodigo,
+          produtoDescricao: i.produtoDescricao,
+          descricaoNfe: i.descricaoNfe,
+          quantidade: i.quantidade,
+          quantidadeConferida: i.quantidadeConferida,
+          unidade: i.unidade,
+          statusConferencia: i.statusConferencia,
+        }))}
+        status={status === "divergente" ? "divergente" : "conferida"}
+      />
+    )
   }
 
   const fb = last ? FEEDBACK[last.tipo] : null

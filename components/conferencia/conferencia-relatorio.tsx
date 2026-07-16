@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ItemStatusBadge } from "@/components/status-badge"
 import { gerarRelatorioConferencia, listRelatoriosNota } from "@/app/actions/relatorio-conferencia"
+import { baixarRelatorioTxt, abrirRelatorioPdf } from "@/lib/relatorio-download"
 
 type ItemPayload = {
   id: number
@@ -60,8 +61,8 @@ export function ConferenciaRelatorio({ nota, itens, status }: Props) {
       toast.success("Relatório gerado e salvo.")
       setEstoquista("")
       await mutate()
-      // Abre o PDF de impressão automaticamente.
-      window.open(`/api/relatorios-conferencia/${res.id}/pdf`, "_blank")
+      // Abre o PDF de impressão automaticamente (via fetch autenticado).
+      await abrirRelatorioPdf(res.id)
     } finally {
       setGerando(false)
     }
@@ -194,17 +195,13 @@ export function ConferenciaRelatorio({ nota, itens, status }: Props) {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <a href={`/api/relatorios-conferencia/${r.id}/txt`} target="_blank" rel="noopener noreferrer">
-                      <Download className="mr-1.5 h-4 w-4" />
-                      TXT
-                    </a>
+                  <Button variant="outline" size="sm" onClick={() => baixarRelatorioTxt(r.id, nota.numero)}>
+                    <Download className="mr-1.5 h-4 w-4" />
+                    TXT
                   </Button>
-                  <Button asChild size="sm">
-                    <a href={`/api/relatorios-conferencia/${r.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                      <Printer className="mr-1.5 h-4 w-4" />
-                      Imprimir PDF
-                    </a>
+                  <Button size="sm" onClick={() => abrirRelatorioPdf(r.id)}>
+                    <Printer className="mr-1.5 h-4 w-4" />
+                    Imprimir PDF
                   </Button>
                 </div>
               </li>

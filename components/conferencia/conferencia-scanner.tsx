@@ -155,6 +155,8 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
         scanUuid: crypto.randomUUID(),
       })
       applyResult(res)
+    } catch {
+      toast.error("Erro ao processar leitura.")
     } finally {
       setBusy(false)
       focusInput()

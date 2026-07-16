@@ -143,7 +143,7 @@ export async function processarLeitura(input: {
     .where(
       and(
         eq(produtos.ativo, true),
-        or(eq(produtos.ean, codigo), eq(produtos.codigoBarras, codigo), eq(produtos.codigoInterno, codigo)),
+        or(eq(produtos.codigoBarras, codigo), eq(produtos.codigoInterno, codigo)),
       ),
     )
     .limit(1)
@@ -346,9 +346,9 @@ export async function vincularItem(input: { itemNotaId: number; produtoId: numbe
     }
   }
 
-  // Herda o EAN da NF-e para o produto se ele ainda não tiver.
-  if (item.ean && !produto.ean) {
-    await db.update(produtos).set({ ean: item.ean, updatedAt: new Date() }).where(eq(produtos.id, produto.id))
+  // Herda o EAN da NF-e como código de barras do produto se ele ainda não tiver.
+  if (item.ean && !produto.codigoBarras) {
+    await db.update(produtos).set({ codigoBarras: item.ean, updatedAt: new Date() }).where(eq(produtos.id, produto.id))
   }
 
   revalidatePath(`/conferencia/${item.notaId}`)

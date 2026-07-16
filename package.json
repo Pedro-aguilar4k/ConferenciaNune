@@ -29,6 +29,7 @@
     "better-auth": "latest",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "cmdk": "^1.1.1",
     "date-fns": "3.6.0",
     "drizzle-orm": "latest",
     "fast-xml-parser": "^5.10.1",

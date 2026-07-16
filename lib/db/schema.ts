@@ -220,14 +220,21 @@ export const historicoAprendizado = pgTable("historico_aprendizado", {
 })
 
 // Historico de leituras durante a conferencia (scan de codigo de barras).
-export const historicoLeituras = pgTable("historico_leituras", {
-  id: serial("id").primaryKey(),
-  notaId: integer("nota_id"),
-  itemNotaId: integer("item_nota_id"),
-  produtoId: integer("produto_id"),
-  codigoLido: text("codigo_lido"),
-  resultado: text("resultado"), // ok | divergencia | nao_encontrado
-  quantidade: numeric("quantidade"),
-  usuarioId: text("usuario_id"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-})
+export const historicoLeituras = pgTable(
+  "historico_leituras",
+  {
+    id: serial("id").primaryKey(),
+    notaId: integer("nota_id"),
+    itemNotaId: integer("item_nota_id"),
+    produtoId: integer("produto_id"),
+    codigoLido: text("codigo_lido"),
+    resultado: text("resultado"), // encontrado | nao_pertence | desconhecido | produto_errado | ja_conferido
+    quantidade: numeric("quantidade"),
+    scanUuid: text("scan_uuid"),
+    usuarioId: text("usuario_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    notaScanIdx: uniqueIndex("historico_leituras_nota_scan_idx").on(t.notaId, t.scanUuid),
+  }),
+)

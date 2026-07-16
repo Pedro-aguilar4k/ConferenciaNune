@@ -56,20 +56,27 @@ type ConferenciaData = {
   progress: { itensCompletos: number; totalItens: number }
 }
 
-// Beep curto via Web Audio (sem assets externos).
+// Beep curto via Web Audio. Reutiliza um único AudioContext para evitar
+// a latência (e o limite de contextos) de recriar um a cada leitura.
+let sharedAudioCtx: AudioContext | null = null
 function beep(kind: "ok" | "error") {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    const ctx = sharedAudioCtx
+    if (ctx.state === "suspended") void ctx.resume()
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.connect(gain)
     gain.connect(ctx.destination)
-    osc.frequency.value = kind === "ok" ? 880 : 220
+    osc.frequency.value = kind === "ok" ? 1040 : 220
     osc.type = kind === "ok" ? "sine" : "square"
-    gain.gain.setValueAtTime(0.15, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25)
-    osc.start()
-    osc.stop(ctx.currentTime + 0.25)
+    const t = ctx.currentTime
+    gain.gain.setValueAtTime(0.14, t)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
+    osc.start(t)
+    osc.stop(t + 0.1)
   } catch {
     /* ignora ambientes sem áudio */
   }
@@ -99,6 +106,16 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
   const [activeId, setActiveId] = useState<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Refs para acessar o estado mais recente dentro do loop da fila.
+  const activeIdRef = useRef<number | null>(null)
+  const statusRef = useRef(status)
+  const queueRef = useRef<string[]>([])
+  const processingRef = useRef(false)
+
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
+
   const focusInput = useCallback(() => inputRef.current?.focus(), [])
 
   useEffect(() => {
@@ -123,44 +140,66 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
         ),
       )
       // Mantém como item ativo enquanto não estiver completo.
-      if (res.tipo === "parcial") setActiveId(res.item.id)
-      else if (res.tipo === "completo") setActiveId(null)
+      if (res.tipo === "parcial") {
+        setActiveId(res.item.id)
+        activeIdRef.current = res.item.id
+      } else if (res.tipo === "completo") {
+        setActiveId(null)
+        activeIdRef.current = null
+      }
     }
     if (res.notaCompleta && res.success) {
       toast.success("Todos os itens foram conferidos!")
     }
   }
 
-  async function handleScan(e?: React.FormEvent) {
-    e?.preventDefault()
-    const value = codigo.trim()
-    if (!value || busy) return
+  // Drena a fila de leituras uma a uma, sem bloquear novas bipagens.
+  const drainQueue = useCallback(async () => {
+    if (processingRef.current) return
+    processingRef.current = true
     setBusy(true)
-    setCodigo("")
     try {
-      if (status !== "em_conferencia") {
-        const start = await iniciarConferencia(initial.nota.id)
-        if (!start.ok) {
-          toast.error(start.error)
-          setBusy(false)
-          focusInput()
-          return
+      while (queueRef.current.length > 0) {
+        const value = queueRef.current.shift()!
+        if (statusRef.current !== "em_conferencia") {
+          const start = await iniciarConferencia(initial.nota.id)
+          if (!start.ok) {
+            toast.error(start.error)
+            queueRef.current = [] // descarta pendentes até resolver o bloqueio
+            break
+          }
+          statusRef.current = "em_conferencia"
+          setStatus("em_conferencia")
         }
-        setStatus("em_conferencia")
+        try {
+          const res = await processarLeitura({
+            notaId: initial.nota.id,
+            codigoBarras: value,
+            itemAtivoId: activeIdRef.current,
+            scanUuid: crypto.randomUUID(),
+          })
+          applyResult(res)
+        } catch {
+          toast.error("Erro ao processar leitura.")
+        }
       }
-      const res = await processarLeitura({
-        notaId: initial.nota.id,
-        codigoBarras: value,
-        itemAtivoId: activeId,
-        scanUuid: crypto.randomUUID(),
-      })
-      applyResult(res)
-    } catch {
-      toast.error("Erro ao processar leitura.")
     } finally {
+      processingRef.current = false
       setBusy(false)
       focusInput()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial.nota.id, focusInput])
+
+  function handleScan(e?: React.FormEvent) {
+    e?.preventDefault()
+    const value = codigo.trim()
+    if (!value) return
+    // Enfileira e libera o input imediatamente para a próxima leitura.
+    queueRef.current.push(value)
+    setCodigo("")
+    focusInput()
+    void drainQueue()
   }
 
   async function handleBind(itemId: number, produtoId: number, descricao: string) {
@@ -265,14 +304,29 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
             ref={inputRef}
             value={codigo}
             onChange={(e) => setCodigo(e.target.value)}
+            onBlur={(e) => {
+              // Só recupera o foco se ele não foi para outro campo/botão
+              // (combobox de vínculo, bipar inline, finalizar, etc.).
+              const next = e.relatedTarget as HTMLElement | null
+              if (
+                next &&
+                (next.tagName === "INPUT" ||
+                  next.tagName === "BUTTON" ||
+                  next.closest('[role="dialog"]') ||
+                  next.closest('[role="listbox"]'))
+              ) {
+                return
+              }
+              setTimeout(focusInput, 0)
+            }}
             placeholder="Código de barras..."
             className="h-12 text-lg"
             autoComplete="off"
             inputMode="numeric"
-            disabled={busy}
+            autoFocus
             aria-label="Código de barras"
           />
-          <Button type="submit" size="lg" disabled={busy || !codigo.trim()} className="h-12 px-6">
+          <Button type="submit" size="lg" disabled={!codigo.trim()} className="h-12 px-6">
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : "Bipar"}
           </Button>
         </form>
@@ -347,6 +401,7 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
                     variant={isActive ? "default" : "outline"}
                     onClick={() => {
                       setActiveId(i.id)
+                      activeIdRef.current = i.id
                       focusInput()
                     }}
                   >

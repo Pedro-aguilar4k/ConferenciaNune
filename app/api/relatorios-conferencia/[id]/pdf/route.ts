@@ -73,10 +73,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const font = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
 
-  // Logo da loja (PNG com fundo transparente) — embutida no cabeçalho.
+  // Logo da loja em branco (PNG transparente) — vai direto sobre o azul.
   let logo: PDFImage | null = null
   try {
-    const logoBytes = await readFile(path.join(process.cwd(), "public", "nune-logo.png"))
+    const logoBytes = await readFile(path.join(process.cwd(), "public", "nune-logo-white.png"))
     logo = await pdf.embedPng(logoBytes)
   } catch {
     logo = null
@@ -105,23 +105,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     // Detalhe azul (linha inferior)
     page.drawRectangle({ x: 0, y: PAGE_H - bandH - 4, width: PAGE_W, height: 4, color: BLUE })
 
-    // Bloco branco com a logo (fundo transparente da logo aparece sobre o branco)
-    const tileW = 72
-    const tileH = 56
-    const tileX = MARGIN
-    const tileTop = PAGE_H - 24
+    // Logo branca diretamente sobre a faixa azul (sem quadro).
     let brandX = MARGIN
     if (logo) {
-      page.drawRectangle({ x: tileX, y: tileTop - tileH, width: tileW, height: tileH, color: WHITE })
-      const lw = 54
+      const lw = 62
       const lh = lw / logoRatio
       page.drawImage(logo, {
-        x: tileX + (tileW - lw) / 2,
-        y: tileTop - tileH + (tileH - lh) / 2,
+        x: MARGIN,
+        y: PAGE_H - bandH / 2 - lh / 2,
         width: lw,
         height: lh,
       })
-      brandX = tileX + tileW + 16
+      brandX = MARGIN + lw + 16
     }
 
     text("NUNEDIESEL", brandX, PAGE_H - 44, { size: 21, f: bold, color: WHITE })

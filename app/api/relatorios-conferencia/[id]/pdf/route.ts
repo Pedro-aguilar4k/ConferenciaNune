@@ -1,20 +1,23 @@
 import { NextResponse } from "next/server"
-import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from "pdf-lib"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont, type PDFImage } from "pdf-lib"
 import { db } from "@/lib/db"
 import { relatoriosConferencia } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { requireAnyPermission } from "@/lib/guards"
 import { parseRelatorio, type RelatorioData } from "@/lib/relatorio-format"
 
-// Paleta NuneDiesel
+// Paleta NuneDiesel — azul e branco
 const NAVY = rgb(0.086, 0.102, 0.384)
-const ORANGE = rgb(0.898, 0.376, 0.141)
+const BLUE = rgb(0.161, 0.322, 0.706)
+const BLUE_SOFT = rgb(0.62, 0.71, 0.93)
 const WHITE = rgb(1, 1, 1)
 const INK = rgb(0.1, 0.12, 0.17)
 const MUTED = rgb(0.42, 0.45, 0.52)
-const LIGHT = rgb(0.965, 0.97, 0.98)
-const ZEBRA = rgb(0.975, 0.978, 0.985)
-const BORDER = rgb(0.86, 0.88, 0.91)
+const LIGHT = rgb(0.957, 0.969, 0.988)
+const ZEBRA = rgb(0.97, 0.976, 0.99)
+const BORDER = rgb(0.83, 0.86, 0.92)
 const GREEN = rgb(0.13, 0.55, 0.34)
 const GREEN_BG = rgb(0.9, 0.96, 0.92)
 const RED = rgb(0.75, 0.26, 0.26)
@@ -70,6 +73,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const font = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
 
+  // Logo da loja (PNG com fundo transparente) — embutida no cabeçalho.
+  let logo: PDFImage | null = null
+  try {
+    const logoBytes = await readFile(path.join(process.cwd(), "public", "nune-logo.png"))
+    logo = await pdf.embedPng(logoBytes)
+  } catch {
+    logo = null
+  }
+  const logoRatio = logo ? logo.width / logo.height : 1.5
+
   const generatedLabel = fmtDate(data.gerado, true)
 
   // ---- Estado de paginação ----
@@ -86,20 +99,42 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   const drawHeader = () => {
-    // Faixa navy
-    page.drawRectangle({ x: 0, y: PAGE_H - 96, width: PAGE_W, height: 96, color: NAVY })
-    // Detalhe laranja
-    page.drawRectangle({ x: 0, y: PAGE_H - 100, width: PAGE_W, height: 4, color: ORANGE })
-    text("NUNEDIESEL", MARGIN, PAGE_H - 46, { size: 22, f: bold, color: WHITE })
-    text("AUTOPECAS  .  LINHA PESADA", MARGIN, PAGE_H - 62, { size: 8, f: bold, color: ORANGE })
+    const bandH = 104
+    // Faixa azul-marinho
+    page.drawRectangle({ x: 0, y: PAGE_H - bandH, width: PAGE_W, height: bandH, color: NAVY })
+    // Detalhe azul (linha inferior)
+    page.drawRectangle({ x: 0, y: PAGE_H - bandH - 4, width: PAGE_W, height: 4, color: BLUE })
+
+    // Bloco branco com a logo (fundo transparente da logo aparece sobre o branco)
+    const tileW = 72
+    const tileH = 56
+    const tileX = MARGIN
+    const tileTop = PAGE_H - 24
+    let brandX = MARGIN
+    if (logo) {
+      page.drawRectangle({ x: tileX, y: tileTop - tileH, width: tileW, height: tileH, color: WHITE })
+      const lw = 54
+      const lh = lw / logoRatio
+      page.drawImage(logo, {
+        x: tileX + (tileW - lw) / 2,
+        y: tileTop - tileH + (tileH - lh) / 2,
+        width: lw,
+        height: lh,
+      })
+      brandX = tileX + tileW + 16
+    }
+
+    text("NUNEDIESEL", brandX, PAGE_H - 44, { size: 21, f: bold, color: WHITE })
+    text("AUTOPECAS  .  LINHA PESADA", brandX, PAGE_H - 60, { size: 8, f: bold, color: BLUE_SOFT })
+
     // Título à direita
     const t1 = "RELATORIO DE CONFERENCIA"
     const t1w = bold.widthOfTextAtSize(t1, 12)
     text(t1, PAGE_W - MARGIN - t1w, PAGE_H - 44, { size: 12, f: bold, color: WHITE })
     const t2 = "Documento de recebimento de mercadoria"
     const t2w = font.widthOfTextAtSize(t2, 8)
-    text(t2, PAGE_W - MARGIN - t2w, PAGE_H - 58, { size: 8, color: rgb(0.75, 0.78, 0.9) })
-    y = PAGE_H - 100 - 26
+    text(t2, PAGE_W - MARGIN - t2w, PAGE_H - 60, { size: 8, color: BLUE_SOFT })
+    y = PAGE_H - bandH - 26
   }
 
   const drawFooter = (pageNum: number) => {

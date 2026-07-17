@@ -1,17 +1,13 @@
 "use client"
 
-import { useState } from "react"
 import useSWR from "swr"
-import { toast } from "sonner"
 import Link from "next/link"
-import { ArrowLeft, CheckCircle2, AlertTriangle, FileText, Printer, Loader2, ClipboardList } from "lucide-react"
+import { ArrowLeft, CheckCircle2, AlertTriangle, FileText, Printer, ClipboardList } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ItemStatusBadge } from "@/components/status-badge"
-import { gerarRelatorioConferencia, listRelatoriosNota } from "@/app/actions/relatorio-conferencia"
+import { listRelatoriosNota } from "@/app/actions/relatorio-conferencia"
 import { abrirRelatorioPdf } from "@/lib/relatorio-download"
 
 type ItemPayload = {
@@ -36,37 +32,11 @@ function isOk(i: ItemPayload) {
 }
 
 export function ConferenciaRelatorio({ nota, itens, status }: Props) {
-  const [estoquista, setEstoquista] = useState("")
-  const [gerando, setGerando] = useState(false)
-
-  const { data: relatorios, mutate } = useSWR(["relatorios-nota", nota.id], () => listRelatoriosNota(nota.id))
+  const { data: relatorios } = useSWR(["relatorios-nota", nota.id], () => listRelatoriosNota(nota.id))
 
   const totalItens = itens.length
   const conferidos = itens.filter(isOk).length
   const divergentes = totalItens - conferidos
-
-  async function handleGerar() {
-    const nome = estoquista.trim()
-    if (!nome) {
-      toast.error("Informe o nome do estoquista.")
-      return
-    }
-    setGerando(true)
-    try {
-      const res = await gerarRelatorioConferencia({ notaId: nota.id, estoquista: nome })
-      if (!res.ok) {
-        toast.error(res.error)
-        return
-      }
-      toast.success("Relatório gerado e salvo.")
-      setEstoquista("")
-      await mutate()
-      // Abre o PDF de impressão automaticamente (via fetch autenticado).
-      await abrirRelatorioPdf(res.id)
-    } finally {
-      setGerando(false)
-    }
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -147,33 +117,6 @@ export function ConferenciaRelatorio({ nota, itens, status }: Props) {
               ))}
             </TableBody>
           </Table>
-        </div>
-      </Card>
-
-      {/* Gerar relatório */}
-      <Card className="flex flex-col gap-4 p-5">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Gerar relatório</h2>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <Label htmlFor="estoquista">Nome do estoquista que fez a conferência</Label>
-            <Input
-              id="estoquista"
-              value={estoquista}
-              onChange={(e) => setEstoquista(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.nativeEvent.isComposing) handleGerar()
-              }}
-              placeholder="Ex: João da Silva"
-              autoComplete="off"
-            />
-          </div>
-          <Button onClick={handleGerar} disabled={gerando} className="h-10">
-            {gerando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-            Gerar relatório
-          </Button>
         </div>
       </Card>
 

@@ -199,6 +199,46 @@ export async function getNota(id: number) {
   return { nota, itens }
 }
 
+/**
+ * Lista apenas as notas que ainda precisam ser conferidas (pendente ou em_conferencia).
+ * Notas já conferidas/divergentes não aparecem aqui — ficam somente na aba de Relatórios.
+ */
+export async function listNotasParaConferencia(params?: { search?: string }): Promise<NotaListItem[]> {
+  await requirePermission("conferir")
+  const search = params?.search?.trim()
+
+  const conditions = [
+    or(eq(notas.status, "pendente"), eq(notas.status, "em_conferencia")),
+  ]
+
+  if (search) {
+    conditions.push(
+      or(
+        ilike(notas.numero, `%${search}%`),
+        ilike(notas.fornecedorNome, `%${search}%`),
+      )!,
+    )
+  }
+
+  return db
+    .select({
+      id: notas.id,
+      numero: notas.numero,
+      fornecedorNome: notas.fornecedorNome,
+      dataEmissao: notas.dataEmissao,
+      valorTotal: notas.valorTotal,
+      status: notas.status,
+      origem: notas.origem,
+      totalItens: notas.totalItens,
+      itensConferidos: notas.itensConferidos,
+      createdAt: notas.createdAt,
+    })
+    .from(notas)
+    .where(and(...conditions))
+    .orderBy(desc(notas.createdAt))
+    .limit(100)
+}
+
 export async function deleteNota(id: number) {
   await requirePermission("gerenciar_notas")
   await db.delete(itensNota).where(eq(itensNota.notaId, id))

@@ -437,6 +437,32 @@ export async function finalizarConferencia(notaId: number) {
   return { ok: true as const, status }
 }
 
+/**
+ * Finaliza a conferência e gera o relatório PDF em uma única chamada.
+ * Após isso a nota some da aba de conferência e fica em Importar por 24h.
+ */
+export async function finalizarEGerarRelatorio(input: { notaId: number; estoquista: string }) {
+  await requirePermission("conferir")
+  const { notaId, estoquista } = input
+  const nome = estoquista.trim()
+  if (!nome) return { ok: false as const, error: "Informe o nome do estoquista." }
+
+  // 1. Finaliza a conferência (marca status + conferidaEm).
+  const fin = await finalizarConferencia(notaId)
+  if (!fin.ok) return { ok: false as const, error: "Erro ao finalizar a conferência." }
+
+  // 2. Gera o relatório.
+  const { gerarRelatorioConferencia } = await import("@/app/actions/relatorio-conferencia")
+  const rel = await gerarRelatorioConferencia({ notaId, estoquista: nome })
+  if (!rel.ok) return { ok: false as const, error: rel.error }
+
+  revalidatePath("/conferencia")
+  revalidatePath("/importar")
+  revalidatePath("/relatorios")
+
+  return { ok: true as const, relatorioId: rel.id, status: fin.status }
+}
+
 /** Ajuste manual da quantidade conferida de um item (correção). */
 export async function ajustarQuantidade(input: { itemNotaId: number; notaId: number; quantidadeConferida: number }) {
   await requirePermission("conferir")

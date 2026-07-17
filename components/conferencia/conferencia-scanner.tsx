@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   ArrowLeft,
@@ -12,11 +13,21 @@ import {
   Link2,
   Loader2,
   PackageCheck,
+  CheckCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { ItemStatusBadge } from "@/components/status-badge"
 import { ProdutoCombobox } from "@/components/conferencia/produto-combobox"
 import { ConferenciaRelatorio } from "@/components/conferencia/conferencia-relatorio"
@@ -26,8 +37,10 @@ import {
   vincularItem,
   iniciarConferencia,
   finalizarConferencia,
+  finalizarEGerarRelatorio,
   type LeituraResult,
 } from "@/app/actions/conferencia"
+import { abrirRelatorioPdf } from "@/lib/relatorio-download"
 
 type GameItem = {
   id: number
@@ -96,6 +109,7 @@ const FEEDBACK: Record<
 }
 
 export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaData; canBind: boolean }) {
+  const router = useRouter()
   const [itens, setItens] = useState<GameItem[]>(initial.itens)
   const [progress, setProgress] = useState(initial.progress)
   const [status, setStatus] = useState(initial.nota.status)
@@ -103,6 +117,10 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState<LeituraResult | null>(null)
   const [activeId, setActiveId] = useState<number | null>(null)
+  // Modal de finalização
+  const [modalAberto, setModalAberto] = useState(false)
+  const [estoquista, setEstoquista] = useState("")
+  const [finalizando, setFinalizando] = useState(false)
   // Se a nota já foi finalizada, abre direto no relatório.
   const [finalizado, setFinalizado] = useState(
     initial.nota.status === "conferida" || initial.nota.status === "divergente",
@@ -237,6 +255,33 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
     }
   }
 
+  async function handleFinalizarComRelatorio() {
+    const nome = estoquista.trim()
+    if (!nome) {
+      toast.error("Informe o nome do estoquista.")
+      return
+    }
+    setFinalizando(true)
+    try {
+      const res = await finalizarEGerarRelatorio({ notaId: initial.nota.id, estoquista: nome })
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      toast.success(
+        res.status === "conferida"
+          ? "Conferência finalizada! Relatório gerado."
+          : "Conferência finalizada com divergências. Relatório gerado.",
+      )
+      setModalAberto(false)
+      // Abre o PDF automaticamente antes de redirecionar.
+      await abrirRelatorioPdf(res.relatorioId)
+      router.push("/conferencia")
+    } finally {
+      setFinalizando(false)
+    }
+  }
+
   // Conferência finalizada: mostra a etapa de relatório.
   if (finalizado) {
     return (
@@ -276,7 +321,8 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
             </h1>
             <p className="text-sm text-muted-foreground">{initial.nota.fornecedorNome ?? "Sem fornecedor"}</p>
           </div>
-          <Button onClick={handleFinalizar} variant="outline">
+          <Button onClick={() => setModalAberto(true)} className="gap-2">
+            <CheckCheck className="h-4 w-4" />
             Finalizar conferência
           </Button>
         </div>
@@ -385,6 +431,58 @@ export function ConferenciaScanner({ initial, canBind }: { initial: ConferenciaD
           </div>
         </Card>
       )}
+
+      {/* Modal de finalização */}
+      <Dialog open={modalAberto} onOpenChange={(o) => { if (!finalizando) setModalAberto(o) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Finalizar conferência</DialogTitle>
+            <DialogDescription>
+              Informe o nome do estoquista responsável. O relatório será gerado automaticamente e a nota
+              sairá da fila de conferência.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="estoquista-modal">Nome do estoquista</Label>
+              <Input
+                id="estoquista-modal"
+                value={estoquista}
+                onChange={(e) => setEstoquista(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) handleFinalizarComRelatorio()
+                }}
+                placeholder="Ex: João da Silva"
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+            <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {progress.itensCompletos}/{progress.totalItens} itens conferidos
+              </span>
+              {progress.itensCompletos < progress.totalItens && (
+                <span className="ml-1 text-warning">
+                  — {progress.totalItens - progress.itensCompletos} item(ns) ainda pendente(s).
+                </span>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setModalAberto(false)} disabled={finalizando}>
+              Cancelar
+            </Button>
+            <Button onClick={handleFinalizarComRelatorio} disabled={finalizando || !estoquista.trim()}>
+              {finalizando ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCheck className="mr-2 h-4 w-4" />
+              )}
+              {finalizando ? "Finalizando..." : "Confirmar e gerar relatório"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Lista de itens */}
       <Card className="flex flex-col divide-y divide-border">

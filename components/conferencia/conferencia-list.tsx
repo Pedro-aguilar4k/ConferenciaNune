@@ -7,16 +7,9 @@ import { ScanLine, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { NotaStatusBadge } from "@/components/status-badge"
 import { SearchBar } from "@/components/search-bar"
-import { listNotas, type NotaListItem } from "@/app/actions/notas"
+import { listNotasParaConferencia, type NotaListItem } from "@/app/actions/notas"
 
 function fmtDate(d: Date | string | null) {
   if (!d) return "—"
@@ -25,32 +18,19 @@ function fmtDate(d: Date | string | null) {
 
 export function ConferenciaList() {
   const [search, setSearch] = useState("")
-  const [status, setStatus] = useState("todos")
-  const { data, isLoading } = useSWR(["conf-notas", search, status], () => listNotas({ search, status }))
+  const { data, isLoading } = useSWR(["conf-notas", search], () =>
+    listNotasParaConferencia({ search }),
+  )
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos os status</SelectItem>
-            <SelectItem value="pendente">Pendente</SelectItem>
-            <SelectItem value="em_conferencia">Em conferência</SelectItem>
-            <SelectItem value="conferida">Conferida</SelectItem>
-            <SelectItem value="divergente">Divergente</SelectItem>
-          </SelectContent>
-        </Select>
-        <SearchBar value={search} onChange={setSearch} placeholder="Buscar nota ou fornecedor..." />
-      </div>
+      <SearchBar value={search} onChange={setSearch} placeholder="Buscar nota ou fornecedor..." />
 
       {isLoading ? (
         <p className="py-10 text-center text-muted-foreground">Carregando...</p>
       ) : !data || data.length === 0 ? (
         <Card className="py-12 text-center text-muted-foreground">
-          Nenhuma nota disponível para conferência.
+          Nenhuma nota aguardando conferência.
         </Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -65,7 +45,9 @@ export function ConferenciaList() {
                     <p className="truncate font-semibold text-foreground">
                       {n.numero ? `Nota Nº ${n.numero}` : `Nota #${n.id}`}
                     </p>
-                    <p className="truncate text-sm text-muted-foreground">{n.fornecedorNome ?? "Sem fornecedor"}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {n.fornecedorNome ?? "Sem fornecedor"}
+                    </p>
                   </div>
                   <NotaStatusBadge status={n.status} />
                 </div>
@@ -81,7 +63,9 @@ export function ConferenciaList() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Emissão {fmtDate(n.dataEmissao)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Emissão {fmtDate(n.dataEmissao)}
+                  </span>
                   <Button asChild size="sm">
                     <Link href={`/conferencia/${n.id}`}>
                       <ScanLine className="mr-1.5 h-4 w-4" />

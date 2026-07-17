@@ -17,20 +17,6 @@ async function fetchBlob(url: string): Promise<Blob | null> {
   }
 }
 
-/** Baixa o arquivo .txt do relatório. */
-export async function baixarRelatorioTxt(id: number, numeroNota?: string | null) {
-  const blob = await fetchBlob(`/api/relatorios-conferencia/${id}/txt`)
-  if (!blob) return
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = `relatorio-conferencia-${numeroNota ?? id}.txt`
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
-}
-
 /** Abre o PDF de impressão do relatório em uma nova aba. */
 export async function abrirRelatorioPdf(id: number) {
   const blob = await fetchBlob(`/api/relatorios-conferencia/${id}/pdf`)

@@ -1,11 +1,51 @@
 import { NextResponse } from "next/server"
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
+import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from "pdf-lib"
 import { db } from "@/lib/db"
 import { relatoriosConferencia } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { requireAnyPermission } from "@/lib/guards"
+import { parseRelatorio, type RelatorioData } from "@/lib/relatorio-format"
 
-// Reconstrói o PDF de impressão a partir do TXT salvo (fonte de verdade).
+// Paleta NuneDiesel
+const NAVY = rgb(0.086, 0.102, 0.384)
+const ORANGE = rgb(0.898, 0.376, 0.141)
+const WHITE = rgb(1, 1, 1)
+const INK = rgb(0.1, 0.12, 0.17)
+const MUTED = rgb(0.42, 0.45, 0.52)
+const LIGHT = rgb(0.965, 0.97, 0.98)
+const ZEBRA = rgb(0.975, 0.978, 0.985)
+const BORDER = rgb(0.86, 0.88, 0.91)
+const GREEN = rgb(0.13, 0.55, 0.34)
+const GREEN_BG = rgb(0.9, 0.96, 0.92)
+const RED = rgb(0.75, 0.26, 0.26)
+const RED_BG = rgb(0.98, 0.92, 0.92)
+
+const PAGE_W = 595.28
+const PAGE_H = 841.89
+const MARGIN = 48
+const CONTENT_W = PAGE_W - MARGIN * 2
+
+// Mantém apenas caracteres suportados pela codificação WinAnsi.
+function enc(s: string | null | undefined): string {
+  return (s ?? "").replace(/[^\x00-\xff]/g, "?").replace(/[\x81\x8d\x8f\x90\x9d]/g, "?")
+}
+
+function fmtDate(iso: string, withTime = false): string {
+  if (!iso) return "-"
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return "-"
+  const p = (n: number) => String(n).padStart(2, "0")
+  const base = `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`
+  return withTime ? `${base} ${p(d.getHours())}:${p(d.getMinutes())}` : base
+}
+
+function truncate(text: string, font: PDFFont, size: number, maxWidth: number): string {
+  if (font.widthOfTextAtSize(text, size) <= maxWidth) return text
+  let t = text
+  while (t.length > 1 && font.widthOfTextAtSize(t + "...", size) > maxWidth) t = t.slice(0, -1)
+  return t + "..."
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAnyPermission("conferir", "relatorios")
@@ -24,49 +64,243 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .limit(1)
   if (!rel) return NextResponse.json({ error: "Relatório não encontrado" }, { status: 404 })
 
+  const data = parseRelatorio(rel.conteudoTxt)
+
   const pdf = await PDFDocument.create()
-  const font = await pdf.embedFont(StandardFonts.Courier)
+  const font = await pdf.embedFont(StandardFonts.Helvetica)
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
 
-  const fontSize = 9
-  const lineHeight = 12
-  const margin = 40
-  const pageWidth = 595.28 // A4
-  const pageHeight = 841.89
-  const usableHeight = pageHeight - margin * 2
-  const linesPerPage = Math.floor(usableHeight / lineHeight)
+  const generatedLabel = fmtDate(data.gerado, true)
 
-  // Normaliza caracteres não suportados pelas fontes padrão (WinAnsi).
-  const lines = rel.conteudoTxt
-    .replace(/\r/g, "")
-    .split("\n")
-    .map((l) => l.replace(/[^\x20-\x7E]/g, (c) => {
-      const map: Record<string, string> = { "ç": "c", "Ç": "C", "ã": "a", "á": "a", "à": "a", "â": "a", "é": "e", "ê": "e", "í": "i", "ó": "o", "ô": "o", "õ": "o", "ú": "u" }
-      return map[c] ?? "?"
-    }))
+  // ---- Estado de paginação ----
+  let page: PDFPage = pdf.addPage([PAGE_W, PAGE_H])
+  let y = PAGE_H
 
-  let page = pdf.addPage([pageWidth, pageHeight])
-  let cursor = pageHeight - margin
-  let count = 0
-
-  for (const line of lines) {
-    if (count >= linesPerPage) {
-      page = pdf.addPage([pageWidth, pageHeight])
-      cursor = pageHeight - margin
-      count = 0
-    }
-    page.drawText(line, {
-      x: margin,
-      y: cursor,
-      size: fontSize,
-      font,
-      color: rgb(0.08, 0.1, 0.38),
-    })
-    cursor -= lineHeight
-    count++
+  const text = (
+    s: string,
+    x: number,
+    yy: number,
+    opts: { size?: number; f?: PDFFont; color?: ReturnType<typeof rgb> } = {},
+  ) => {
+    page.drawText(enc(s), { x, y: yy, size: opts.size ?? 10, font: opts.f ?? font, color: opts.color ?? INK })
   }
 
+  const drawHeader = () => {
+    // Faixa navy
+    page.drawRectangle({ x: 0, y: PAGE_H - 96, width: PAGE_W, height: 96, color: NAVY })
+    // Detalhe laranja
+    page.drawRectangle({ x: 0, y: PAGE_H - 100, width: PAGE_W, height: 4, color: ORANGE })
+    text("NUNEDIESEL", MARGIN, PAGE_H - 46, { size: 22, f: bold, color: WHITE })
+    text("AUTOPECAS  .  LINHA PESADA", MARGIN, PAGE_H - 62, { size: 8, f: bold, color: ORANGE })
+    // Título à direita
+    const t1 = "RELATORIO DE CONFERENCIA"
+    const t1w = bold.widthOfTextAtSize(t1, 12)
+    text(t1, PAGE_W - MARGIN - t1w, PAGE_H - 44, { size: 12, f: bold, color: WHITE })
+    const t2 = "Documento de recebimento de mercadoria"
+    const t2w = font.widthOfTextAtSize(t2, 8)
+    text(t2, PAGE_W - MARGIN - t2w, PAGE_H - 58, { size: 8, color: rgb(0.75, 0.78, 0.9) })
+    y = PAGE_H - 100 - 26
+  }
+
+  const drawFooter = (pageNum: number) => {
+    const fy = 32
+    page.drawLine({
+      start: { x: MARGIN, y: fy + 12 },
+      end: { x: PAGE_W - MARGIN, y: fy + 12 },
+      thickness: 0.5,
+      color: BORDER,
+    })
+    text("NuneDiesel  .  Relatorio de conferencia", MARGIN, fy, { size: 7.5, color: MUTED })
+    const rightTxt = `Gerado em ${generatedLabel}   .   Pagina ${pageNum}`
+    const rw = font.widthOfTextAtSize(rightTxt, 7.5)
+    text(rightTxt, PAGE_W - MARGIN - rw, fy, { size: 7.5, color: MUTED })
+  }
+
+  let pageNum = 1
+  drawHeader()
+
+  const newPage = () => {
+    drawFooter(pageNum)
+    page = pdf.addPage([PAGE_W, PAGE_H])
+    pageNum++
+    drawHeader()
+  }
+
+  const ensure = (needed: number) => {
+    if (y - needed < 60) newPage()
+  }
+
+  // ---- Cartão de metadados ----
+  const cardH = 148
+  ensure(cardH)
+  const cardTop = y
+  page.drawRectangle({
+    x: MARGIN,
+    y: cardTop - cardH,
+    width: CONTENT_W,
+    height: cardH,
+    color: LIGHT,
+    borderColor: BORDER,
+    borderWidth: 1,
+  })
+
+  // Badge de status (canto superior direito do cartão)
+  const conferida = data.status === "conferida"
+  const badge = conferida ? "CONFERIDA" : "DIVERGENTE"
+  const badgeColor = conferida ? GREEN : RED
+  const badgeBg = conferida ? GREEN_BG : RED_BG
+  const badgeW = bold.widthOfTextAtSize(badge, 9) + 22
+  page.drawRectangle({
+    x: MARGIN + CONTENT_W - badgeW - 16,
+    y: cardTop - 34,
+    width: badgeW,
+    height: 20,
+    color: badgeBg,
+    borderColor: badgeColor,
+    borderWidth: 1,
+  })
+  text(badge, MARGIN + CONTENT_W - badgeW - 16 + 11, cardTop - 28, { size: 9, f: bold, color: badgeColor })
+
+  const field = (label: string, value: string, x: number, yy: number, maxW: number) => {
+    text(label.toUpperCase(), x, yy, { size: 7, f: bold, color: MUTED })
+    text(truncate(value || "-", font, 10.5, maxW), x, yy - 14, { size: 10.5, color: INK })
+  }
+
+  const colL = MARGIN + 16
+  const colR = MARGIN + CONTENT_W / 2 + 8
+  const colW = CONTENT_W / 2 - 24
+  let ry = cardTop - 50
+
+  const notaLabel = data.serie ? `${data.numero || "-"}  (Serie ${data.serie})` : data.numero || "-"
+  field("Nota Fiscal", notaLabel, colL, ry, colW - badgeW)
+  field("Emissao", fmtDate(data.emissao), colR, ry, colW)
+  ry -= 40
+  field("Fornecedor", data.fornecedor, colL, ry, colW)
+  field("CNPJ", data.cnpj, colR, ry, colW)
+  ry -= 40
+  field("Estoquista", data.estoquista, colL, ry, colW)
+  field("Conferido por", data.conferente, colR, ry, colW)
+
+  y = cardTop - cardH - 12
+  // Chave de acesso (linha completa, discreta)
+  if (data.chave) {
+    text("CHAVE DE ACESSO", MARGIN, y, { size: 7, f: bold, color: MUTED })
+    text(truncate(data.chave, font, 9, CONTENT_W), MARGIN + 96, y, { size: 9, color: MUTED })
+    y -= 22
+  } else {
+    y -= 4
+  }
+
+  // ---- Título da tabela ----
+  ensure(40)
+  text("ITENS CONFERIDOS", MARGIN, y, { size: 11, f: bold, color: NAVY })
+  y -= 16
+
+  // ---- Cabeçalho da tabela ----
+  const cols = {
+    cod: MARGIN + 8,
+    desc: MARGIN + 78,
+    un: MARGIN + 330,
+    nf: MARGIN + 408, // right edge
+    conf: MARGIN + 462, // right edge
+    sit: MARGIN + CONTENT_W - 8, // right edge
+  }
+  const drawTableHead = () => {
+    page.drawRectangle({ x: MARGIN, y: y - 22, width: CONTENT_W, height: 22, color: NAVY })
+    const hy = y - 15
+    text("COD", cols.cod, hy, { size: 8, f: bold, color: WHITE })
+    text("DESCRICAO", cols.desc, hy, { size: 8, f: bold, color: WHITE })
+    text("UN", cols.un, hy, { size: 8, f: bold, color: WHITE })
+    const nfw = bold.widthOfTextAtSize("NF", 8)
+    text("NF", cols.nf - nfw, hy, { size: 8, f: bold, color: WHITE })
+    const cfw = bold.widthOfTextAtSize("CONF", 8)
+    text("CONF", cols.conf - cfw, hy, { size: 8, f: bold, color: WHITE })
+    const stw = bold.widthOfTextAtSize("SIT", 8)
+    text("SIT", cols.sit - stw, hy, { size: 8, f: bold, color: WHITE })
+    y -= 22
+  }
+  drawTableHead()
+
+  // ---- Linhas ----
+  const rowH = 20
+  data.itens.forEach((it, idx) => {
+    if (y - rowH < 60) {
+      newPage()
+      y -= 4
+      drawTableHead()
+    }
+    const rowTop = y
+    if (!it.ok) {
+      page.drawRectangle({ x: MARGIN, y: rowTop - rowH, width: CONTENT_W, height: rowH, color: RED_BG })
+    } else if (idx % 2 === 1) {
+      page.drawRectangle({ x: MARGIN, y: rowTop - rowH, width: CONTENT_W, height: rowH, color: ZEBRA })
+    }
+    const ty = rowTop - 13.5
+    text(truncate(it.cod, font, 8.5, 64), cols.cod, ty, { size: 8.5, color: INK })
+    text(truncate(it.descricao, font, 9, cols.un - cols.desc - 6), cols.desc, ty, { size: 9, color: INK })
+    text(truncate(it.unidade || "-", font, 8.5, 40), cols.un, ty, { size: 8.5, color: MUTED })
+    const nfStr = String(it.nf)
+    text(nfStr, cols.nf - font.widthOfTextAtSize(nfStr, 9), ty, { size: 9, color: INK })
+    const cfStr = String(it.conf)
+    text(cfStr, cols.conf - font.widthOfTextAtSize(cfStr, 9), ty, { size: 9, f: bold, color: it.ok ? INK : RED })
+    const sit = it.ok ? "OK" : "DIVERG."
+    const sitColor = it.ok ? GREEN : RED
+    text(sit, cols.sit - bold.widthOfTextAtSize(sit, 8), ty, { size: 8, f: bold, color: sitColor })
+    // Linha separadora sutil
+    page.drawLine({
+      start: { x: MARGIN, y: rowTop - rowH },
+      end: { x: PAGE_W - MARGIN, y: rowTop - rowH },
+      thickness: 0.4,
+      color: BORDER,
+    })
+    y -= rowH
+  })
+
+  // ---- Resumo (3 caixas) ----
+  y -= 20
+  ensure(70)
+  const boxGap = 12
+  const boxW = (CONTENT_W - boxGap * 2) / 3
+  const boxH = 52
+  const boxTop = y
+  const boxes = [
+    { label: "TOTAL DE ITENS", value: String(data.total), color: NAVY },
+    { label: "CONFERIDOS OK", value: String(data.conferidos), color: GREEN },
+    { label: "DIVERGENTES", value: String(data.divergentes), color: data.divergentes > 0 ? RED : MUTED },
+  ]
+  boxes.forEach((b, i) => {
+    const bx = MARGIN + i * (boxW + boxGap)
+    page.drawRectangle({
+      x: bx,
+      y: boxTop - boxH,
+      width: boxW,
+      height: boxH,
+      color: LIGHT,
+      borderColor: BORDER,
+      borderWidth: 1,
+    })
+    page.drawRectangle({ x: bx, y: boxTop - boxH, width: 4, height: boxH, color: b.color })
+    text(b.label, bx + 14, boxTop - 20, { size: 7.5, f: bold, color: MUTED })
+    text(b.value, bx + 14, boxTop - 42, { size: 20, f: bold, color: b.color })
+  })
+  y = boxTop - boxH - 40
+
+  // ---- Assinaturas ----
+  ensure(60)
+  const sigW = (CONTENT_W - 40) / 2
+  const sigY = y
+  const sig = (label: string, sub: string, x: number) => {
+    page.drawLine({ start: { x, y: sigY }, end: { x: x + sigW, y: sigY }, thickness: 0.8, color: INK })
+    text(label, x, sigY - 14, { size: 9, f: bold, color: INK })
+    text(sub, x, sigY - 26, { size: 7.5, color: MUTED })
+  }
+  sig("Estoquista", data.estoquista || "______________________", MARGIN)
+  sig("Conferente", data.conferente || "______________________", MARGIN + sigW + 40)
+
+  drawFooter(pageNum)
+
   const bytes = await pdf.save()
-  const nome = `relatorio-conferencia-nota-${rel.numeroNota ?? rel.notaId}-${rel.id}.pdf`
+  const nome = `relatorio-conferencia-nota-${data.numero || rel.notaId}-${rel.id}.pdf`
 
   return new NextResponse(Buffer.from(bytes), {
     headers: {

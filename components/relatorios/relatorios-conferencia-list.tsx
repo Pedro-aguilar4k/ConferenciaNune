@@ -1,7 +1,7 @@
 "use client"
 
 import useSWR from "swr"
-import { FileText, Printer } from "lucide-react"
+import { Printer } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { listTodosRelatorios } from "@/app/actions/relatorio-conferencia"
-import { baixarRelatorioTxt, abrirRelatorioPdf } from "@/lib/relatorio-download"
+import { abrirRelatorioPdf } from "@/lib/relatorio-download"
 
 function fmtDateTime(d: Date | string) {
   return new Date(d).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
@@ -39,7 +39,7 @@ export function RelatoriosConferenciaList({ numero }: { numero: string }) {
                 <TableHead>Estoquista</TableHead>
                 <TableHead>Situação</TableHead>
                 <TableHead>Gerado em</TableHead>
-                <TableHead className="text-right">Documentos</TableHead>
+                <TableHead className="text-right">Relatório</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -79,14 +79,6 @@ export function RelatoriosConferenciaList({ numero }: { numero: string }) {
                     <TableCell className="text-muted-foreground">{fmtDateTime(r.createdAt)}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 bg-transparent"
-                          onClick={() => baixarRelatorioTxt(r.id, r.numeroNota)}
-                        >
-                          <FileText className="h-4 w-4" aria-hidden="true" /> TXT
-                        </Button>
                         <Button size="sm" className="gap-1.5" onClick={() => abrirRelatorioPdf(r.id)}>
                           <Printer className="h-4 w-4" aria-hidden="true" /> Imprimir PDF
                         </Button>

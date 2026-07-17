@@ -4,7 +4,7 @@ import { useState } from "react"
 import useSWR from "swr"
 import { toast } from "sonner"
 import Link from "next/link"
-import { ArrowLeft, CheckCircle2, AlertTriangle, FileText, Printer, Download, Loader2, ClipboardList } from "lucide-react"
+import { ArrowLeft, CheckCircle2, AlertTriangle, FileText, Printer, Loader2, ClipboardList } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ItemStatusBadge } from "@/components/status-badge"
 import { gerarRelatorioConferencia, listRelatoriosNota } from "@/app/actions/relatorio-conferencia"
-import { baixarRelatorioTxt, abrirRelatorioPdf } from "@/lib/relatorio-download"
+import { abrirRelatorioPdf } from "@/lib/relatorio-download"
 
 type ItemPayload = {
   id: number
@@ -195,10 +195,6 @@ export function ConferenciaRelatorio({ nota, itens, status }: Props) {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => baixarRelatorioTxt(r.id, nota.numero)}>
-                    <Download className="mr-1.5 h-4 w-4" />
-                    TXT
-                  </Button>
                   <Button size="sm" onClick={() => abrirRelatorioPdf(r.id)}>
                     <Printer className="mr-1.5 h-4 w-4" />
                     Imprimir PDF

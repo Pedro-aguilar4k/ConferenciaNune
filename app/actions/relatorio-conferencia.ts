@@ -4,106 +4,60 @@ import { db } from "@/lib/db"
 import { notas, itensNota, produtos, relatoriosConferencia } from "@/lib/db/schema"
 import { eq, desc, and, ilike } from "drizzle-orm"
 import { requirePermission } from "@/lib/guards"
+import { serializeRelatorio, type RelatorioData } from "@/lib/relatorio-format"
 
 function qty(v: string | null | undefined): number {
   return v ? Number(v) : 0
 }
 
-function pad(value: string, width: number): string {
-  const v = value ?? ""
-  if (v.length >= width) return v.slice(0, width)
-  return v + " ".repeat(width - v.length)
-}
-
-function padLeft(value: string, width: number): string {
-  const v = value ?? ""
-  if (v.length >= width) return v.slice(0, width)
-  return " ".repeat(width - v.length) + v
-}
-
-const LINE = "=".repeat(78)
-const THIN = "-".repeat(78)
-
 /**
- * Monta o conteúdo textual (fonte de verdade) do relatório de conferência.
- * Layout de largura fixa (78 colunas) para reimpressão consistente em PDF.
+ * Monta os dados estruturados (fonte de verdade) do relatório de conferência.
+ * O conteúdo é serializado como texto leve; o PDF bonito é reconstruído a
+ * partir dele na hora da impressão.
  */
-function buildRelatorioTxt(params: {
+function buildRelatorioData(params: {
   nota: typeof notas.$inferSelect
   itens: { item: typeof itensNota.$inferSelect; produtoCodigo: string | null; produtoDescricao: string | null }[]
   estoquista: string
   conferentePor: string
   geradoEm: Date
-}): { txt: string; totalItens: number; conferidos: number; divergentes: number; status: string } {
+}): RelatorioData {
   const { nota, itens, estoquista, conferentePor, geradoEm } = params
 
   let conferidos = 0
   let divergentes = 0
-  for (const { item } of itens) {
-    const q = qty(item.quantidade)
-    const qc = qty(item.quantidadeConferida)
-    if (qc >= q && q > 0) conferidos++
-    else divergentes++
-  }
-  const status = divergentes === 0 ? "conferida" : "divergente"
-
-  const dt = (d: Date | null | undefined) =>
-    d ? new Date(d).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "-"
-
-  const linhas: string[] = []
-  linhas.push(LINE)
-  linhas.push(pad("NUNEDIESEL - AUTOPECAS - LINHA PESADA", 78))
-  linhas.push(pad("RELATORIO DE CONFERENCIA DE MERCADORIA", 78))
-  linhas.push(LINE)
-  linhas.push("")
-  linhas.push(`Nota Fiscal.....: ${nota.numero ?? "-"}${nota.serie ? "  Serie: " + nota.serie : ""}`)
-  linhas.push(`Fornecedor......: ${nota.fornecedorNome ?? "-"}`)
-  if (nota.fornecedorCnpj) linhas.push(`CNPJ............: ${nota.fornecedorCnpj}`)
-  linhas.push(`Emissao.........: ${dt(nota.dataEmissao)}`)
-  linhas.push(`Chave de acesso.: ${nota.chaveAcesso ?? "-"}`)
-  linhas.push("")
-  linhas.push(`Estoquista......: ${estoquista}`)
-  linhas.push(`Conferido por...: ${conferentePor}`)
-  linhas.push(`Gerado em.......: ${dt(geradoEm)}`)
-  linhas.push(`Status..........: ${status === "conferida" ? "CONFERIDA (SEM DIVERGENCIAS)" : "DIVERGENTE"}`)
-  linhas.push("")
-  linhas.push(THIN)
-  linhas.push(pad("COD", 8) + pad("DESCRICAO", 40) + padLeft("NF", 6) + padLeft("CONF", 7) + padLeft("SIT", 9))
-  linhas.push(THIN)
-
-  for (const { item, produtoCodigo, produtoDescricao } of itens) {
+  const linhasItens = itens.map(({ item, produtoCodigo, produtoDescricao }) => {
     const q = qty(item.quantidade)
     const qc = qty(item.quantidadeConferida)
     const ok = qc >= q && q > 0
-    const cod = produtoCodigo ?? item.codigoFornecedor ?? "-"
-    const desc = produtoDescricao ?? item.descricaoFornecedor ?? "-"
-    linhas.push(
-      pad(cod, 8) +
-        pad(desc, 40) +
-        padLeft(String(q), 6) +
-        padLeft(String(qc), 7) +
-        padLeft(ok ? "OK" : "DIVERG.", 9),
-    )
-    // Diferença detalhada quando diverge.
-    if (!ok) {
-      const dif = qc - q
-      linhas.push(pad("", 8) + pad(`  >> diferenca: ${dif > 0 ? "+" : ""}${dif}`, 40))
+    if (ok) conferidos++
+    else divergentes++
+    return {
+      cod: produtoCodigo ?? item.codigoFornecedor ?? "-",
+      descricao: produtoDescricao ?? item.descricaoFornecedor ?? "-",
+      unidade: item.unidade ?? "",
+      nf: q,
+      conf: qc,
+      ok,
     }
+  })
+
+  return {
+    numero: nota.numero ?? "",
+    serie: nota.serie ?? "",
+    fornecedor: nota.fornecedorNome ?? "",
+    cnpj: nota.fornecedorCnpj ?? "",
+    emissao: nota.dataEmissao ? new Date(nota.dataEmissao).toISOString() : "",
+    chave: nota.chaveAcesso ?? "",
+    estoquista,
+    conferente: conferentePor,
+    gerado: geradoEm.toISOString(),
+    status: divergentes === 0 ? "conferida" : "divergente",
+    total: itens.length,
+    conferidos,
+    divergentes,
+    itens: linhasItens,
   }
-
-  linhas.push(THIN)
-  linhas.push("")
-  linhas.push(`Total de itens..........: ${itens.length}`)
-  linhas.push(`Itens conferidos OK.....: ${conferidos}`)
-  linhas.push(`Itens divergentes.......: ${divergentes}`)
-  linhas.push("")
-  linhas.push(LINE)
-  linhas.push(pad("Assinatura do estoquista: ______________________________________", 78))
-  linhas.push("")
-  linhas.push(pad("Assinatura do conferente: ______________________________________", 78))
-  linhas.push(LINE)
-
-  return { txt: linhas.join("\n"), totalItens: itens.length, conferidos, divergentes, status }
 }
 
 export type RelatorioResumo = {
@@ -144,7 +98,7 @@ export async function gerarRelatorioConferencia(input: {
     .orderBy(itensNota.id)
 
   const geradoEm = new Date()
-  const built = buildRelatorioTxt({
+  const data = buildRelatorioData({
     nota,
     itens,
     estoquista: nome,
@@ -159,11 +113,11 @@ export async function gerarRelatorioConferencia(input: {
       numeroNota: nota.numero,
       fornecedorNome: nota.fornecedorNome,
       estoquista: nome,
-      status: built.status,
-      totalItens: built.totalItens,
-      itensConferidos: built.conferidos,
-      itensDivergentes: built.divergentes,
-      conteudoTxt: built.txt,
+      status: data.status,
+      totalItens: data.total,
+      itensConferidos: data.conferidos,
+      itensDivergentes: data.divergentes,
+      conteudoTxt: serializeRelatorio(data),
       createdBy: actor.id,
       createdByNome: actor.name,
       createdAt: geradoEm,
